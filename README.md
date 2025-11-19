@@ -5,20 +5,28 @@ application up and running.
 
 Things you may want to cover:
 
-* Ruby version
+* Ruby version: 3.2.2
 
-* System dependencies
+#### Installation steps
+* install ruby version using rbenv: 3.2.2
 
-* Configuration
+`rbenv install 3.2.2`
 
-* Database creation
+`rbenv global 3.2.2`
 
-* Database initialization
+* After cloning the repository run:
 
-* How to run the test suite
+`bundle install`
 
-* Services (job queues, cache servers, search engines, etc.)
+* Setup local db password in database.yml and then run:
 
-* Deployment instructions
+`rails db:create`
 
-* ...
+* run the migration
+
+`rails db:migrate`
+
+* run the server
+
+`rails s`
+

@@ -1,16 +1,26 @@
+
 default: &default
   adapter: postgresql
   encoding: unicode
+  # For details on connection pooling, see Rails configuration guide
+  # https://guides.rubyonrails.org/configuring.html#database-pooling
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-
 
 development:
   <<: *default
   database: ticket_flow_development
+  username: postgres
+  password: password
+  host: localhost
+  port: 5432
 
 test:
   <<: *default
   database: ticket_flow_test
+  username: postgres
+  password: password
+  host: localhost
+  port: 5432
 
 production:
   primary: &primary_production
