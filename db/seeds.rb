@@ -7,3 +7,24 @@
 #   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
+tickets = Ticket.create([
+  { 
+    ticket_id: "1",
+    source: "phone",
+    status: "resolved",
+    priority: "low",
+    description: "logging issue",
+    user_name: "Person1",
+
+
+  }, 
+  
+  { 
+    ticket_id: "2",
+    source: "phone",
+    status: "in_progress",
+    priority: "high",
+    description: "payment issue",
+    user_name: "Person2",
+  }
+])
