@@ -55,7 +55,7 @@ module Api
             end
         
             def ticket_params
-            params.require(:ticket).permit(:ticket_id, :description, :status,
+            params.require(:ticket).permit(:ticket_id,:title, :description, :status,
             :source, :priority, :user_name)
             end
 

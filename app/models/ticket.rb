@@ -3,9 +3,13 @@ class Ticket < ApplicationRecord
      enum :status, {
     open: "open",
     in_progress: "in_progress",
-    resolved: "resolved",
-    closed: "closed"
+    resolved: "resolved"
   }
+    enum :priority, {
+        low: "low",
+        medium: "medium",
+        high: "high"
+    }
     
 
     # Scopes for dashboard summary
