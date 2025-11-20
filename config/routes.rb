@@ -4,7 +4,9 @@ Rails.application.routes.draw do
   root 'pages#index'
    namespace :api do
     namespace :version1 do
-      resources :tickets, param: :ticket_id   
+      resources :tickets, param: :ticket_id  
+      
+      get 'dashboard/summary', to: 'dashboard#summary'
     end
   end
    get '*path', to: 'pages#index', via: :all
