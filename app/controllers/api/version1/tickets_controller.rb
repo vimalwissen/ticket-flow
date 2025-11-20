@@ -10,14 +10,19 @@ module Api
             end
 
             # POST /tickets
-            def create
+            def create 
             ticket = Ticket.new(ticket_params)
+
             if ticket.save
-            render json: ticket, status: :created
+                render json: {
+                message: "Ticket created successfully",
+                ticket: ticket
+                }, status: :created
             else
-            render json: { errors: ticket.errors.full_messages }, status: :unprocessable_entity
+                render json: { errors: ticket.errors.full_messages }, status: :unprocessable_entity
             end
             end
+
 
             # GET /tickets/:ticket_id
             def show
@@ -25,12 +30,15 @@ module Api
             render json: @ticket
             end
 
-            # PUT /tickets/:ticket_id
+            # PATCH /tickets/:ticket_id
             def update
             if @ticket.update(ticket_params)
-            render json: @ticket
+                render json: {
+                message: "Ticket updated successfully",
+                ticket: @ticket
+                }, status: :ok
             else
-            render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+                render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
             end
             end
 
