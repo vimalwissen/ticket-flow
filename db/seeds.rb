@@ -10,6 +10,7 @@
 tickets = Ticket.create([
   { 
     ticket_id: "1",
+    title: "Title1",
     source: "phone",
     status: "resolved",
     priority: "low",
@@ -22,6 +23,7 @@ tickets = Ticket.create([
   { 
     ticket_id: "2",
     source: "phone",
+    title: "Title2",
     status: "in_progress",
     priority: "high",
     description: "payment issue",
