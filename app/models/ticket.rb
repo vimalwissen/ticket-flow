@@ -1,6 +1,7 @@
 class Ticket < ApplicationRecord
-    validates :ticket_id, :description , presence: true
-     enum :status, {
+    validates  :description , presence: true
+    before_create :generate_ticket_id
+    enum :status, {
     open: "open",
     in_progress: "in_progress",
     resolved: "resolved"
