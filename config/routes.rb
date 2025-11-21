@@ -7,6 +7,7 @@ Rails.application.routes.draw do
       resources :tickets, param: :ticket_id  
       
       get 'dashboard/summary', to: 'dashboard#summary'
+      get "dashboard/charts",  to: "dashboard#charts"
     end
   end
    get '*path', to: 'pages#index', via: :all
