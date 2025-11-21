@@ -1,6 +1,7 @@
 class Ticket < ApplicationRecord
-    validates :ticket_id, :description , presence: true
-     enum :status, {
+    validates  :description , presence: true
+    before_create :generate_ticket_id
+    enum :status, {
     open: "open",
     in_progress: "in_progress",
     resolved: "resolved"
@@ -17,6 +18,12 @@ class Ticket < ApplicationRecord
     scope :due_today, -> { where(created_at: Date.today.all_day) }
     scope :open_tickets, -> { where(status: ["open", "in_progress"]) }
     scope :unassigned, -> { where(user_name: [nil, ""]) }
+
+    private
+
+    def generate_ticket_id
+      self.ticket_id=SecureRandom.hex(4)
+    end
 
     
 end
