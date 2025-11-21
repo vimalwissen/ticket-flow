@@ -26,8 +26,16 @@ module Api
 
             # GET /tickets/:ticket_id
             def show
-            @ticket=Ticket.find_by(ticket_id:params[:ticket_id])
-            render json: @ticket
+            if @ticket
+                render json: {
+                message: "Ticket fetched successfully",
+                ticket: @ticket
+                }, status: :ok
+            else
+                render json: {
+                error: "Ticket not found"
+                }, status: :not_found
+            end
             end
 
             # PATCH /tickets/:ticket_id
@@ -55,7 +63,7 @@ module Api
             end
         
             def ticket_params
-            params.require(:ticket).permit(:ticket_id,:title, :description, :status,
+            params.permit(:title, :description, :status,
             :source, :priority, :user_name)
             end
 
