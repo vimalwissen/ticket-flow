@@ -23,20 +23,10 @@ test:
   port: 5432
 
 production:
-  primary: &primary_production
-    <<: *default
-    database: ticket_flow_production
-    username: ticket_flow
-    password: <%= ENV["TICKET_FLOW_DATABASE_PASSWORD"] %>
-  cache:
-    <<: *primary_production
-    database: ticket_flow_production_cache
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *primary_production
-    database: ticket_flow_production_queue
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: ticket_flow_production_cable
-    migrations_paths: db/cable_migrate
+  adapter: postgresql
+  encoding: unicode
+  database: app_production
+  username: app_user
+  password: app_password
+  host: localhost
+  pool: 5
