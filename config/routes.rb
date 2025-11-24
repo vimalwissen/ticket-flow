@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :version1 do
       resources :tickets, param: :ticket_id
+      resources :users, only: [:index, :create, :update]
       get 'dashboard/summary', to: 'dashboard#summary'
       get "dashboard/charts",  to: "dashboard#charts"
     end

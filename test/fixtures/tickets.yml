@@ -1,17 +1,17 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  id: MyString
-  description: MyString
-  user_name: MyString
-  status: MyString
-  source: MyString
-  priority: MyString
+  description: Sample ticket one
+  user_name: Admin User
+  status: open
+  source: web
+  priority: low
+  title: Ticket One
 
 two:
-  id: MyString
-  description: MyString
-  user_name: MyString
-  status: MyString
-  source: MyString
-  priority: MyString
+  description: Sample ticket two
+  user_name: Agent User
+  status: in_progress
+  source: email
+  priority: medium
+  title: Ticket Two
