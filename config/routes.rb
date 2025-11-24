@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   # ---- TICKET API ROUTES ----
   namespace :api do
     namespace :version1 do
+      resources :users
       resources :tickets, param: :ticket_id do
         member do
           patch :status, to: "tickets#change_status"   # PATCH /tickets/:ticket_id/status
