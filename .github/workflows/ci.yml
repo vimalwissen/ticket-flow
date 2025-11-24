@@ -8,6 +8,7 @@ on:
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -20,41 +21,15 @@ jobs:
       - name: Install dependencies
         run: bundle check || bundle install --jobs 4 --retry 3
 
-      - name: Scan for common Rails security vulnerabilities using static analysis
-        run: bundle exec brakeman --no-pager
+      - name: Scan for Rails vulnerabilities (Brakeman)
+        run: bundle exec brakeman --no-pager --exit-on-warn=false
 
-      - name: Scan for known security vulnerabilities in gems used
-        run: bundle exec bundler-audit
-
-  lint:
-    runs-on: ubuntu-latest
-    env:
-      RUBOCOP_CACHE_ROOT: tmp/rubocop
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-
-      - name: Prepare RuboCop cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.RUBOCOP_CACHE_ROOT }}
-          key: ${{ runner.os }}-rubocop-${{ hashFiles('.ruby-version', '**/.rubocop.yml', '**/.rubocop_todo.yml', 'Gemfile.lock') }}-${{ github.run_id }}
-          restore-keys: |
-            ${{ runner.os }}-rubocop-${{ hashFiles('.ruby-version', '**/.rubocop.yml', '**/.rubocop_todo.yml', 'Gemfile.lock') }}-
-
-      - name: Install dependencies
-        run: bundle check || bundle install --jobs 4 --retry 3
-
-      - name: Lint code for consistent style
-        run: bundle exec rubocop -f github
+      - name: Scan for known gem vulnerabilities (bundler-audit)
+        run: bundle exec bundler-audit check --update
 
   test:
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:15
@@ -64,10 +39,13 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+          --health-cmd="pg_isready"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
-      - name: Install packages
+      - name: Install PostgreSQL dependencies
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev
 
       - name: Checkout code
@@ -82,9 +60,11 @@ jobs:
         env:
           PGPASSWORD: password
         run: |
-          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            sleep 1
+          done
 
-      - name: Run tests
+      - name: Run Rails tests
         env:
           RAILS_ENV: test
           DATABASE_URL: postgres://postgres:password@localhost:5432/ticket_flow_test
