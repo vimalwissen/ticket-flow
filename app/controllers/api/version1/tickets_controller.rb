@@ -1,7 +1,7 @@
 module Api
     module Version1
         class TicketsController < ApplicationController
-            before_action :set_ticket, only: [:show, :update, :destroy]
+            before_action :set_ticket, only: [:show, :update,:change_status, :destroy,:assign]
 
             # GET /tickets
             def index
@@ -43,6 +43,29 @@ module Api
             if @ticket.update(ticket_params)
                 render json: {
                 message: "Ticket updated successfully",
+                ticket: @ticket
+                }, status: :ok
+            else
+                render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+            end
+            end
+
+            # PATCH /tickets/:ticket_id/status
+            def change_status
+            if @ticket.update(status: params[:status])
+            render json: { message: "Status updated", ticket: @ticket }
+            else
+            render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+            end
+            end
+
+            # PATCH /tickets/:ticket_id/assign
+            def assign
+            username_value = params[:user_name] == "none" ? nil : params[:user_name]
+
+            if @ticket.update(user_name: username_value)
+                render json: { 
+                message: "Ticket assigned successfully",
                 ticket: @ticket
                 }, status: :ok
             else
