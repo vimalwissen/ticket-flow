@@ -53,4 +53,3 @@ gem "jwt", "~> 3.1"
 
 gem "bcrypt", "~> 3.1"
 
-gem 'rack-cors'
