@@ -22,7 +22,7 @@ jobs:
         run: bundle check || bundle install --jobs 4 --retry 3
 
       - name: Scan for Rails vulnerabilities (Brakeman)
-        run: bundle exec brakeman --no-pager --exit-on-warn=false
+        run: bundle exec brakeman --no-pager --no-exit-on-warn
 
       - name: Scan for known gem vulnerabilities (bundler-audit)
         run: bundle exec bundler-audit check --update
