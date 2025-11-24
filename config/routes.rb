@@ -9,15 +9,27 @@ Rails.application.routes.draw do
   # ---- TICKET API ROUTES ----
   namespace :api do
     namespace :version1 do
-      resources :tickets, param: :ticket_id
-      resources :users, only: [:index, :create, :update]
+      resources :tickets, param: :ticket_id do
+        member do
+          patch :status, to: "tickets#change_status"   # PATCH /tickets/:ticket_id/status
+          patch :assign, to: "tickets#assign"          # PATCH /tickets/:ticket_id/assign
+        end
+      end
+
       get 'dashboard/summary', to: 'dashboard#summary'
-      get "dashboard/charts",  to: "dashboard#charts"
+      get 'dashboard/charts',  to: 'dashboard#charts'
     end
   end
 
-  # ---- DEFAULT CATCH-ALL ----
-  get '*path', to: proc { 
-    [200, { 'Content-Type' => 'application/json' }, [{ message: 'API Running' }.to_json]] 
+  # ---- CORS PRE-FLIGHT (OPTIONS) ----
+  match '*path', to: 'application#options_request', via: :options
+
+  # ---- DEFAULT CATCH-ALL FOR OTHER GET REQUESTS ----
+  get '*path', to: proc {
+    [
+      200,
+      { 'Content-Type' => 'application/json' },
+      [{ message: 'API Running' }.to_json]
+    ]
   }
 end

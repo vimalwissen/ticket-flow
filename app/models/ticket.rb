@@ -11,6 +11,12 @@ class Ticket < ApplicationRecord
         medium: "medium",
         high: "high"
     }
-    
+
+           
+        private
+
+        def generate_ticket_id
+          self.ticket_id=SecureRandom.hex(4)
+        end
 
 end
