@@ -42,7 +42,7 @@ Ticket.find_or_create_by!(ticket_id: "1") do |t|
   t.status      = "resolved"
   t.priority    = "low"
   t.description = "logging issue"
-  t.user_name   = "Person1"
+  t.requestor   = "Person1"
 end
 
 Ticket.find_or_create_by!(ticket_id: "2") do |t|
@@ -51,7 +51,7 @@ Ticket.find_or_create_by!(ticket_id: "2") do |t|
   t.status      = "in_progress"
   t.priority    = "high"
   t.description = "payment issue"
-  t.user_name   = "Person2"
+  t.requestor   = "Person2"
 end
 
 puts "Tickets seeded: #{Ticket.count}"
