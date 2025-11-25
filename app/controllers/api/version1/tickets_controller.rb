@@ -61,9 +61,9 @@ module Api
 
             # PATCH /tickets/:ticket_id/assign
             def assign
-            username_value = params[:user_name] == "none" ? nil : params[:user_name]
+            username_value = params[:assign_to] == "none" ? nil : params[:assign_to]
 
-            if @ticket.update(user_name: username_value)
+            if @ticket.update(assign_to: username_value)
                 render json: { 
                 message: "Ticket assigned successfully",
                 ticket: @ticket
@@ -87,7 +87,7 @@ module Api
         
             def ticket_params
             params.permit(:title, :description, :status,
-            :source, :priority, :user_name)
+            :source, :priority, :requestor,:assign_to)
             end
 
         end

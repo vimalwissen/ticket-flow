@@ -2,7 +2,7 @@
 
 one:
   description: Sample ticket one
-  user_name: Admin User
+  requestor: Admin User
   status: open
   source: web
   priority: low
@@ -10,7 +10,7 @@ one:
 
 two:
   description: Sample ticket two
-  user_name: Agent User
+  requestor: Agent User
   status: in_progress
   source: email
   priority: medium
