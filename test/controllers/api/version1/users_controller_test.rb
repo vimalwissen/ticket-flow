@@ -19,7 +19,7 @@ class Api::Version1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should create user as admin" do
-    user_params = { user: { name: "New User", email: "new@example.com", password: "pass123", password_confirmation: "pass123", role: "agent" } }
+    user_params = { name: "New User", email: "new@example.com", password: "pass123", password_confirmation: "pass123", role: "agent" }
     post api_version1_users_url, params: user_params, headers: { Authorization: "Bearer #{@admin_token}" }, as: :json
     assert_response :created
     json = JSON.parse(response.body)
