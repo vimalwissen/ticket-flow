@@ -12,8 +12,11 @@ Rails.application.routes.draw do
       resources :users
       resources :tickets, param: :ticket_id do
         member do
-          patch :status, to: "tickets#change_status"   # PATCH /tickets/:ticket_id/status
-          patch :assign, to: "tickets#assign"          # PATCH /tickets/:ticket_id/assign
+          patch :status, to: "tickets#change_status"   
+          patch :assign, to: "tickets#assign"       
+          post "watchers", to: "watchers#create"
+          delete "watchers/:watcher_id", to: "watchers#destroy"  
+          get "watchers", to: "watchers#index" 
         end
       end
 
