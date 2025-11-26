@@ -1,4 +1,4 @@
-class CommentController < ApplicationController
+class Api::Version1::CommentController < ApplicationController
 
   # POST /add_comment/:ticket_id
   def create_comment
