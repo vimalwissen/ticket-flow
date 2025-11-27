@@ -17,6 +17,8 @@ Rails.application.routes.draw do
           post "watchers", to: "watchers#create"
           delete "watchers/:watcher_id", to: "watchers#destroy"  
           get "watchers", to: "watchers#index" 
+          post "comments", to: "comments#create"
+          get  "comments", to: "comments#index"
         end
       end
 
@@ -25,8 +27,7 @@ Rails.application.routes.draw do
     end
   end
 
-   # ---- COMMENT ROUTES ----
-  post "add_comment/:ticket_id", to: "comments#create_comment"
+  
 
   # ---- CORS PRE-FLIGHT (OPTIONS) ----
   match '*path', to: 'application#options_request', via: :options

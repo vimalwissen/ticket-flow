@@ -1,4 +1,5 @@
 class Ticket < ApplicationRecord
+    has_many :comments, dependent: :destroy
   validates :description, :title, :requestor, presence: true
   after_initialize :set_defaults, if: :new_record?
 
