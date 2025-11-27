@@ -31,7 +31,7 @@ class DashboardMetricsService
   end
 
   def unassigned
-    Ticket.where(requestor: [nil, ""]).count
+    Ticket.where(assign_to: [nil, ""]).count
   end
 
   def on_hold

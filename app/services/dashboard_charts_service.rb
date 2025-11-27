@@ -47,7 +47,7 @@ class DashboardChartsService
         {
           label: status.to_s.capitalize,
           value: count,
-          color: "#3b82f6"
+          color: priority_color(priority)
         }
       end
     }
@@ -69,7 +69,7 @@ class DashboardChartsService
         {
           label: priority.to_s.capitalize,
           value: count,
-          color: "#ec4899"
+          color: priority_color(priority)
         }
       end
     }
