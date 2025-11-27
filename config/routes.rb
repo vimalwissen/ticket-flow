@@ -19,6 +19,7 @@ Rails.application.routes.draw do
           get "watchers", to: "watchers#index" 
           post "comments", to: "comments#create"
           get  "comments", to: "comments#index"
+          delete "comments/:id", to: "comments#destroy"
         end
       end
 
