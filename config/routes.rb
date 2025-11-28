@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :version1 do
       resources :users
+      resources :workflows, only: [:index, :create]
       resources :tickets, param: :ticket_id do
         member do
           patch :status, to: "tickets#change_status"   

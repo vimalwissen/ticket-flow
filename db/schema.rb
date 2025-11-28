@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_11_26_040539) do
+ActiveRecord::Schema[8.1].define(version: 2025_11_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -44,5 +44,17 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_26_040539) do
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["refresh_token"], name: "index_users_on_refresh_token"
+  end
+
+  create_table "workflows", force: :cascade do |t|
+    t.jsonb "actions", default: {}, null: false
+    t.boolean "active", default: true, null: false
+    t.jsonb "conditions", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.string "event", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_workflows_on_active"
+    t.index ["event"], name: "index_workflows_on_event"
   end
 end
