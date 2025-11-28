@@ -48,7 +48,7 @@ end
 Ticket.find_or_create_by!(ticket_id: "2") do |t|
   t.title       = "Title2"
   t.source      = "phone"
-  t.status      = "in_progress"
+  t.status      = "InProgress"
   t.priority    = "high"
   t.description = "payment issue"
   t.requestor   = "Person2"

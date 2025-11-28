@@ -7,7 +7,7 @@ class Ticket < ApplicationRecord
   validate :attachment_size_limit
   validate :attachment_type_validation
 
-  VALID_STATUSES = %w[open in_progress resolved]
+  VALID_STATUSES = %w[open InProgress OnHold resolved]
   VALID_PRIORITIES = %w[low medium high]
 
   before_create :generate_ticket_id
