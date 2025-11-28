@@ -3,7 +3,7 @@ class Ticket < ApplicationRecord
   validates :description, :title, :requestor, presence: true
   after_initialize :set_defaults, if: :new_record?
 
-  VALID_STATUSES = %w[open in_progress resolved]
+  VALID_STATUSES = %w[open InProgress OnHold resolved]
   VALID_PRIORITIES = %w[low medium high]
 
   before_create :generate_ticket_id

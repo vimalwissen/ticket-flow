@@ -11,7 +11,7 @@ one:
 two:
   description: Sample ticket two
   requestor: Agent User
-  status: in_progress
+  status: InProgress
   source: email
   priority: medium
   title: Ticket Two
