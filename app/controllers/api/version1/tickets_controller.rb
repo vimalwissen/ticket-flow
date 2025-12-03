@@ -32,6 +32,9 @@ module Api
         ticket = Ticket.new(ticket_params)
 
         if ticket.save
+            if ticket.assign_to.present?
+                NotificationService.ticket_assigned(ticket, ticket.assign_to)
+            end
           render json: {
             message: "Ticket created successfully",
             ticket: ticket
@@ -70,6 +73,7 @@ module Api
 
         begin
             @ticket.change_status_to!(new_status)
+            NotificationService.ticket_status_changed(@ticket)
             render json: { message: "Status updated successfully", ticket: @ticket }, status: :ok
         rescue => e
             render json: { error: e.message }, status: :unprocessable_entity
@@ -83,6 +87,9 @@ module Api
             assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
 
             if @ticket.update(assign_to: assign_value)
+                if assign_value.present?
+                    NotificationService.ticket_assigned(@ticket, assign_value)
+                end
             render json: { message: "Ticket assigned successfully", ticket: @ticket }, status: :ok
             else
             render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity

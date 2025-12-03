@@ -23,6 +23,10 @@ Rails.application.routes.draw do
           post "attachment", to: "attachments#create"
         end
       end
+      resources :notifications, only: [:index] do
+        member { patch :mark_read }
+        collection { patch :mark_all_read }
+      end
 
       get 'dashboard/summary', to: 'dashboard#summary'
       get 'dashboard/charts',  to: 'dashboard#charts'
