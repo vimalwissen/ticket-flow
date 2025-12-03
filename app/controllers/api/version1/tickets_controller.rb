@@ -14,11 +14,9 @@ module Api
             ticket = Ticket.new(ticket_params)
 
             if ticket.save
-
                 if ticket.assign_to.present?
                     NotificationService.ticket_assigned(ticket, ticket.assign_to)
                 end
-
                 render json: {
                 message: "Ticket created successfully",
                 ticket: ticket
