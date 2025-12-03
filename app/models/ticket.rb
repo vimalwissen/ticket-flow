@@ -1,39 +1,111 @@
 class Ticket < ApplicationRecord
-    has_many :comments, dependent: :destroy
+  has_many :comments, dependent: :destroy
+  has_one_attached :attachment
+  attr_accessor :updated_by_role
+
   validates :description, :title, :requestor, presence: true
+
+  before_validation :normalize_status_value
   after_initialize :set_defaults, if: :new_record?
   has_one_attached :attachment
 
   validate :attachment_size_limit
   validate :attachment_type_validation
 
-  VALID_STATUSES = %w[open InProgress OnHold resolved]
-  VALID_PRIORITIES = %w[low medium high]
 
   before_create :generate_ticket_id
+  # Final allowed statuses
+  STATUSES = %w[open in_progress on_hold resolved].freeze
+
+  # Allowed transitions
+  TRANSITIONS = {
+    "open" => %w[in_progress on_hold resolved],
+    "in_progress" => %w[on_hold resolved],
+    "on_hold" => %w[in_progress resolved],
+    "resolved" => [] 
+  }.freeze
 
   validates :status, inclusion: {
-    in: VALID_STATUSES,
-    message: "is invalid. Allowed values: #{VALID_STATUSES.join(', ')}"
+    in: STATUSES,
+    message: "must be one of: #{STATUSES.join(', ')}"
   }
 
+  # Priority validation
+  PRIORITIES = %w[low medium high].freeze
   validates :priority, inclusion: {
-    in: VALID_PRIORITIES,
-    message: "is invalid. Allowed values: #{VALID_PRIORITIES.join(', ')}"
+    in: PRIORITIES,
+    message: "must be one of: #{PRIORITIES.join(', ')}"
   }
+
+  validate :validate_status_transition
+
+  # ---------- Methods ---------- #
+
+  def change_status_to!(raw_new_status)
+    assign_attributes(status: Ticket.normalize_status(raw_new_status))
+    
+    unless valid?
+      raise ArgumentError, errors.full_messages.join(", ")
+    end
+
+    save!
+  end
+  def can_transition_to?(raw_new_status)
+    normalized_new = Ticket.normalize_status(raw_new_status)
+    normalized_current = Ticket.normalize_status(self.status)
+
+    allowed = TRANSITIONS[normalized_current] || []
+    allowed.include?(normalized_new)
+  end
+
+  def self.normalize_status(value)
+    return nil if value.nil?
+    
+    value = value.to_s.strip.downcase.gsub(/\s+/, "_")
+
+    # Fix common camelCase inputs
+    value.gsub!("inprogress", "in_progress")
+    value.gsub!("onhold", "on_hold")
+
+    value
+  end
+
+  def validate_status_transition
+      return if status_was.nil? # allow on create
+
+      normalized_previous = Ticket.normalize_status(status_was)
+      normalized_new = Ticket.normalize_status(status)
+
+      allowed = TRANSITIONS[normalized_previous] || []
+
+      # ---- ADMIN OVERRIDE CASE ----
+      if normalized_previous == "resolved" && normalized_new == "open"
+        return if updated_by_role == "admin"
+      end
+
+      unless allowed.include?(normalized_new)
+        errors.add(:status, "cannot transition from '#{normalized_previous}' to '#{normalized_new}'.")
+      end
+  end
 
   private
+
+  def normalize_status_value
+    self.status = Ticket.normalize_status(status)
+  end
 
   def generate_ticket_id
     self.ticket_id = SecureRandom.hex(4)
   end
+
   def set_defaults
     self.status ||= "open"
     self.source ||= "email"
   end
 
+  # Attachment validations
   def attachment_size_limit
-    return unless attachment.attached?
+    return unless attachment.attached?    
     if attachment.blob.byte_size > 50.megabytes
       errors.add(:attachment, "must be less than 50MB")
       attachment.purge
@@ -42,12 +114,15 @@ class Ticket < ApplicationRecord
 
   def attachment_type_validation
     return unless attachment.attached?
-    allowed_types = ["application/pdf",
-                     "application/msword",
-                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+
+    allowed_types = %w[
+      application/pdf
+      application/msword
+      application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    ]
 
     unless allowed_types.include?(attachment.content_type)
-      errors.add(:attachment, "must be a PDF or DOC/DOCX file")
+      errors.add(:attachment, "must be PDF or DOC/DOCX")
       attachment.purge
     end
   end

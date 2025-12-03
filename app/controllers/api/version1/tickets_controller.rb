@@ -4,7 +4,7 @@ module Api
       before_action :authenticate_request
       before_action :set_ticket, only: [:show, :update, :change_status, :destroy, :assign]
 
-      # ---- RBAC ----
+      # RBAC
       # Only Admin + Agent can create, update, assign, or change status
       before_action -> { authorize_role("admin", "agent") }, only: [:create, :update, :assign, :change_status]
 
@@ -15,9 +15,7 @@ module Api
       before_action :require_login, only: [:index, :show]
 
 
-      # =========================
       # GET /tickets
-      # =========================
       def index
         tickets = Ticket.all.order(created_at: :desc)
 
@@ -28,9 +26,8 @@ module Api
       end
 
 
-      # =========================
+      
       # POST /tickets (Admin + Agent only)
-      # =========================
       def create
         ticket = Ticket.new(ticket_params)
 
@@ -45,9 +42,8 @@ module Api
       end
 
 
-      # =========================
+
       # GET /tickets/:ticket_id
-      # =========================
       def show
         render json: {
           message: "Ticket fetched successfully",
@@ -56,9 +52,7 @@ module Api
       end
 
 
-      # =========================
       # PATCH /tickets/:ticket_id (Admin + Agent)
-      # =========================
       def update
         if @ticket.update(ticket_params)
           render json: { message: "Ticket updated successfully", ticket: @ticket }, status: :ok
@@ -68,35 +62,36 @@ module Api
       end
 
 
-      # =========================
-      # PATCH /tickets/:ticket_id/status (Admin + Agent)
-      # =========================
-      def change_status
-        if @ticket.update(status: params[:status])
-          render json: { message: "Status updated successfully", ticket: @ticket }, status: :ok
-        else
-          render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+      
+      # PATCH /tickets/:ticket_id/status
+       def change_status
+        new_status = params[:status]
+        @ticket.updated_by_role = current_user.role
+
+        begin
+            @ticket.change_status_to!(new_status)
+            render json: { message: "Status updated successfully", ticket: @ticket }, status: :ok
+        rescue => e
+            render json: { error: e.message }, status: :unprocessable_entity
         end
-      end
-
-
-      # =========================
-      # PATCH /tickets/:ticket_id/assign (Admin + Agent)
-      # =========================
-      def assign
-        assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
-
-        if @ticket.update(assign_to: assign_value)
-          render json: { message: "Ticket assigned successfully", ticket: @ticket }, status: :ok
-        else
-          render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
         end
-      end
 
 
-      # =========================
+        
+        # PATCH /tickets/:ticket_id/assign (Admin + Agent)
+        def assign
+            assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
+
+            if @ticket.update(assign_to: assign_value)
+            render json: { message: "Ticket assigned successfully", ticket: @ticket }, status: :ok
+            else
+            render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+            end
+        end
+
+
+      
       # DELETE /tickets/:ticket_id (Admin only)
-      # =========================
       def destroy
         @ticket.destroy
         render json: { message: "Ticket deleted successfully" }, status: :ok
@@ -130,7 +125,7 @@ module Api
       end
 
       def ticket_params
-        params.permit(:title, :description, :status, :source, :priority, :requestor, :assign_to)
+        params.permit(:title, :description, :source, :priority, :requestor, :assign_to)
       end
     end
  end
