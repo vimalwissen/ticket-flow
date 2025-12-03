@@ -22,6 +22,10 @@ Rails.application.routes.draw do
           delete "comments/:id", to: "comments#destroy"
         end
       end
+      resources :notifications, only: [:index] do
+        member { patch :mark_read }
+        collection { patch :mark_all_read }
+      end
 
       get 'dashboard/summary', to: 'dashboard#summary'
       get 'dashboard/charts',  to: 'dashboard#charts'
