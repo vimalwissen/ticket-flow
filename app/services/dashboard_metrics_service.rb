@@ -27,15 +27,15 @@ class DashboardMetricsService
   end
 
   def open_tickets
-    Ticket.where(status: ["open", "in_progress"]).count
+    Ticket.where(status: ["open", "InProgress"]).count
   end
 
   def unassigned
-    Ticket.where(assign_to: [nil, ""]).count
+    Ticket.where(requestor: [nil, ""]).count
   end
 
   def on_hold
-    Ticket.where(status: "on_hold").count
+    Ticket.where(status: "OnHold").count
   end
 
   def watching

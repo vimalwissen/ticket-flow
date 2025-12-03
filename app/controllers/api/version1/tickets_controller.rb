@@ -101,5 +101,60 @@ module Api
             :source, :priority, :requestor, :assign_to)
             end
         end
+      end
+
+
+      # =========================
+      # PATCH /tickets/:ticket_id/assign (Admin + Agent)
+      # =========================
+      def assign
+        assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
+
+        if @ticket.update(assign_to: assign_value)
+          render json: { message: "Ticket assigned successfully", ticket: @ticket }, status: :ok
+        else
+          render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
+
+
+      # =========================
+      # DELETE /tickets/:ticket_id (Admin only)
+      # =========================
+      def destroy
+        @ticket.destroy
+        render json: { message: "Ticket deleted successfully" }, status: :ok
+      end
+
+
+      private
+
+     def require_login
+        return if current_user.present?
+        render json: { error: "Unauthorized" }, status: :unauthorized
+      end
+
+
+      def authorize_role(*allowed_roles)
+        unless allowed_roles.include?(current_user.role)
+          render json: {
+            error: "Access Denied: Required role(s): #{allowed_roles.join(', ')}"
+          }, status: :forbidden
+          return
+        end
+      end
+
+      def unauthorized_response
+        render json: { error: "Unauthorized" }, status: :unauthorized
+      end
+
+      def set_ticket
+        @ticket = Ticket.find_by(ticket_id: params[:ticket_id])
+        render json: { error: "Ticket not found" }, status: :not_found unless @ticket
+      end
+
+      def ticket_params
+        params.permit(:title, :description, :status, :source, :priority, :requestor, :assign_to)
+      end
     end
 end
