@@ -12,38 +12,37 @@ Rails.application.routes.draw do
       resources :users
       resources :tickets, param: :ticket_id do
         member do
-          patch :status, to: "tickets#change_status"   
-          patch :assign, to: "tickets#assign"       
-          post "watchers", to: "watchers#create"
-          delete "watchers/:watcher_id", to: "watchers#destroy"  
-          get "watchers", to: "watchers#index" 
+          patch :status, to: "tickets#change_status"
+          patch :assign, to: "tickets#assign"
+          post   :watch, to: "watchers#create"
+          delete :watch, to: "watchers#destroy"
           post "comments", to: "comments#create"
           get  "comments", to: "comments#index"
           delete "comments/:id", to: "comments#destroy"
           post "attachment", to: "attachments#create"
         end
       end
-      resources :notifications, only: [:index] do
+      resources :notifications, only: [ :index ] do
         member { patch :mark_read }
         collection { patch :mark_all_read }
       end
 
-      get 'dashboard/summary', to: 'dashboard#summary'
-      get 'dashboard/charts',  to: 'dashboard#charts'
+      get "dashboard/summary", to: "dashboard#summary"
+      get "dashboard/charts",  to: "dashboard#charts"
     end
   end
 
-  
+
 
   # ---- CORS PRE-FLIGHT (OPTIONS) ----
-  match '*path', to: 'application#options_request', via: :options
+  match "*path", to: "application#options_request", via: :options
 
   # ---- DEFAULT CATCH-ALL FOR OTHER GET REQUESTS ----
-  get '*path', to: proc {
+  get "*path", to: proc {
     [
       200,
-      { 'Content-Type' => 'application/json' },
-      [{ message: 'API Running' }.to_json]
+      { "Content-Type" => "application/json" },
+      [ { message: "API Running" }.to_json ]
     ]
   }
 end

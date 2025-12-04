@@ -1,6 +1,10 @@
 class DashboardMetricsService
-  def self.call
-    new.build
+  def self.call(user)
+    new(user).build
+  end
+
+  def initialize(user)
+    @user = user
   end
 
   def build
@@ -27,11 +31,11 @@ class DashboardMetricsService
   end
 
   def open_tickets
-    Ticket.where(status: ["open", "InProgress"]).count
+    Ticket.where(status: [ "open", "InProgress" ]).count
   end
 
   def unassigned
-    Ticket.where(requestor: [nil, ""]).count
+    Ticket.where(requestor: [ nil, "" ]).count
   end
 
   def on_hold
@@ -39,6 +43,6 @@ class DashboardMetricsService
   end
 
   def watching
-    0 # To implement later
+    TicketWatcher.where(watcher_id: @user.id).count
   end
 end
