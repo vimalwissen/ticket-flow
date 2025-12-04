@@ -17,11 +17,19 @@ module Api
 
       # GET /tickets
       def index
-        tickets = Ticket.all.order(created_at: :desc)
+        @q = Ticket.ransack(params[:q])
+        tickets = @q.result(distinct: true).order(created_at: :desc).page(params[:page]).per(params[:per_page])
 
         render json: {
           message: "Tickets fetched successfully",
-          tickets: tickets
+          tickets: tickets,
+          meta: {
+            current_page: tickets.current_page,
+            next_page: tickets.next_page,
+            prev_page: tickets.prev_page,
+            total_pages: tickets.total_pages,
+            total_count: tickets.total_count
+          }
         }, status: :ok
       end
 
@@ -82,20 +90,33 @@ module Api
 
 
         
-        # PATCH /tickets/:ticket_id/assign (Admin + Agent)
-        def assign
-            assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
+    # PATCH /tickets/:ticket_id/assign (Admin + Agent)
+    def assign
+    assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
 
-            if @ticket.update(assign_to: assign_value)
-                if assign_value.present?
-                    NotificationService.ticket_assigned(@ticket, assign_value)
-                end
-            render json: { message: "Ticket assigned successfully", ticket: @ticket }, status: :ok
-            else
-            render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
-            end
+    if assign_value.present?
+        user = User.find_by(id: assign_value) || User.find_by(name: assign_value)
+
+        unless user
+        return render json: { error: "User '#{assign_value}' not found" }, status: :not_found
         end
 
+        assign_value = user.id
+    end
+
+    if @ticket.update(assign_to: assign_value)
+        # Only send notification **if a valid user was assigned**
+      #  NotificationService.ticket_assigned(@ticket, assign_value) if assign_value.present?
+
+        render json: { 
+        message: assign_value.present? ? "Ticket assigned successfully" : "Ticket unassigned successfully",
+        ticket: @ticket.ticket_id,
+        assigned_user: @ticket.assigned_user&.name 
+        }, status: :ok
+    else
+        render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+    end
+    end
 
       
       # DELETE /tickets/:ticket_id (Admin only)
@@ -132,7 +153,7 @@ module Api
       end
 
       def ticket_params
-        params.permit(:title, :description, :source, :priority, :requestor, :assign_to)
+        (params[:ticket] || params).permit(:title, :description, :priority, :source, :requestor, :assign_to)
       end
     end
  end

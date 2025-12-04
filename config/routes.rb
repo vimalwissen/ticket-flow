@@ -14,6 +14,7 @@ Rails.application.routes.draw do
         member do
           patch :status, to: "tickets#change_status"
           patch :assign, to: "tickets#assign"
+          put :update, to: "tickets#update"
           post   :watch, to: "watchers#create"
           delete :watch, to: "watchers#destroy"
           post "comments", to: "comments#create"
