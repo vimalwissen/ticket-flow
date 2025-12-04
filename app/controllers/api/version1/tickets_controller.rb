@@ -16,22 +16,35 @@ module Api
 
 
       # GET /tickets
-      def index
-        @q = Ticket.ransack(params[:q])
-        tickets = @q.result(distinct: true).order(created_at: :desc).page(params[:page]).per(params[:per_page])
+    def index
+    case current_user.role
+    when "admin"
+        tickets_scope = Ticket.all
+    when "agent"
+        tickets_scope = Ticket.where(
+        "requestor = :username OR assign_to = :user_id",
+        username: current_user.email,
+        user_id: current_user.email
+        )
+    else # Consumer
+        tickets_scope = Ticket.where(requestor: current_user.email)
+    end
 
-        render json: {
-          message: "Tickets fetched successfully",
-          tickets: tickets,
-          meta: {
-            current_page: tickets.current_page,
-            next_page: tickets.next_page,
-            prev_page: tickets.prev_page,
-            total_pages: tickets.total_pages,
-            total_count: tickets.total_count
-          }
-        }, status: :ok
-      end
+    @q = tickets_scope.ransack(params[:q])
+    tickets = @q.result(distinct: true).order(created_at: :desc).page(params[:page]).per(params[:per_page])
+
+    render json: {
+        message: "Tickets fetched successfully",
+        tickets: tickets,
+        meta: {
+        current_page: tickets.current_page,
+        next_page: tickets.next_page,
+        prev_page: tickets.prev_page,
+        total_pages: tickets.total_pages,
+        total_count: tickets.total_count
+        }
+    }, status: :ok
+    end
 
 
       
@@ -95,23 +108,22 @@ module Api
     assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
 
     if assign_value.present?
-        user = User.find_by(id: assign_value) || User.find_by(name: assign_value)
+        user = User.find_by(id: assign_value) || User.find_by(email: assign_value)
 
         unless user
         return render json: { error: "User '#{assign_value}' not found" }, status: :not_found
         end
 
-        assign_value = user.id
+        assign_value = user.email
     end
 
     if @ticket.update(assign_to: assign_value)
         # Only send notification **if a valid user was assigned**
-      #  NotificationService.ticket_assigned(@ticket, assign_value) if assign_value.present?
+       NotificationService.ticket_assigned(@ticket, assign_value) if assign_value.present?
 
         render json: { 
         message: assign_value.present? ? "Ticket assigned successfully" : "Ticket unassigned successfully",
-        ticket: @ticket.ticket_id,
-        assigned_user: @ticket.assigned_user&.name 
+        ticket: @ticket.ticket_id 
         }, status: :ok
     else
         render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
