@@ -126,4 +126,12 @@ class Ticket < ApplicationRecord
       attachment.purge
     end
   end
+
+  def self.ransackable_attributes(auth_object = nil)
+    ["assign_to", "created_at", "description", "id", "priority", "requestor", "source", "status", "ticket_id", "title", "updated_at"]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    ["comments"]
+  end
 end
