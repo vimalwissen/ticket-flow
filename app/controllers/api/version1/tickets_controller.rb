@@ -17,11 +17,19 @@ module Api
 
       # GET /tickets
       def index
-        tickets = Ticket.all.order(created_at: :desc)
+        @q = Ticket.ransack(params[:q])
+        tickets = @q.result(distinct: true).order(created_at: :desc).page(params[:page]).per(params[:per_page])
 
         render json: {
           message: "Tickets fetched successfully",
-          tickets: tickets
+          tickets: tickets,
+          meta: {
+            current_page: tickets.current_page,
+            next_page: tickets.next_page,
+            prev_page: tickets.prev_page,
+            total_pages: tickets.total_pages,
+            total_count: tickets.total_count
+          }
         }, status: :ok
       end
 
