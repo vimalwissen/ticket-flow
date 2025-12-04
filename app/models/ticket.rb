@@ -2,6 +2,7 @@ class Ticket < ApplicationRecord
   has_many :comments, dependent: :destroy
   has_one_attached :attachment
   attr_accessor :updated_by_role
+  belongs_to :assigned_user, class_name: "User", foreign_key: "assign_to", optional: true
 
   validates :description, :title, :requestor, presence: true
 
@@ -16,6 +17,7 @@ class Ticket < ApplicationRecord
   before_create :generate_ticket_id
   # Final allowed statuses
   STATUSES = %w[open in_progress on_hold resolved].freeze
+  SOURCE=%w[email phone chat web].freeze
 
   # Allowed transitions
   TRANSITIONS = {
@@ -28,6 +30,10 @@ class Ticket < ApplicationRecord
   validates :status, inclusion: {
     in: STATUSES,
     message: "must be one of: #{STATUSES.join(', ')}"
+  }
+  validates :source, inclusion: {
+    in: SOURCE,
+    message: "must be one of: #{SOURCE.join(', ')}"
   }
 
   # Priority validation
@@ -71,22 +77,25 @@ class Ticket < ApplicationRecord
   end
 
   def validate_status_transition
-      return if status_was.nil? # allow on create
+    return if new_record? # allow on create
 
-      normalized_previous = Ticket.normalize_status(status_was)
-      normalized_new = Ticket.normalize_status(status)
+    normalized_previous = Ticket.normalize_status(status_was)
+    normalized_new = Ticket.normalize_status(status)
 
-      allowed = TRANSITIONS[normalized_previous] || []
+    # Allow updates that do NOT modify the status
+    return if normalized_previous == normalized_new
 
-      # ---- ADMIN OVERRIDE CASE ----
-      if normalized_previous == "resolved" && normalized_new == "open"
-        return if updated_by_role == "admin"
-      end
+    allowed = TRANSITIONS[normalized_previous] || []
 
-      unless allowed.include?(normalized_new)
-        errors.add(:status, "cannot transition from '#{normalized_previous}' to '#{normalized_new}'.")
-      end
+    # ---- ADMIN OVERRIDE CASE ----
+    if normalized_previous == "resolved" && normalized_new == "open"
+      return if updated_by_role == "admin"
+    end
+
+    unless allowed.include?(normalized_new)
+      errors.add(:status, "cannot transition from '#{normalized_previous}' to '#{normalized_new}'. Allowed: #{allowed.join(', ')}")
   end
+end
 
   private
 
@@ -99,6 +108,8 @@ class Ticket < ApplicationRecord
   end
 
   def set_defaults
+    return unless new_record?
+
     self.status ||= "open"
     self.source ||= "email"
   end
