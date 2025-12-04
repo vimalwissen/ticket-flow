@@ -95,18 +95,6 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_28_094827) do
     t.index ["refresh_token"], name: "index_users_on_refresh_token"
   end
 
-  create_table "workflows", force: :cascade do |t|
-    t.jsonb "actions", default: {}, null: false
-    t.boolean "active", default: true, null: false
-    t.jsonb "conditions", default: {}, null: false
-    t.datetime "created_at", null: false
-    t.string "event", null: false
-    t.string "name", null: false
-    t.datetime "updated_at", null: false
-    t.index ["active"], name: "index_workflows_on_active"
-    t.index ["event"], name: "index_workflows_on_event"
-  end
-
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "comments", "tickets"
