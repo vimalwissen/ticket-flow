@@ -23,7 +23,7 @@ class NotificationService
 
   def self.ticket_assigned(ticket, agent)
     create(
-      user: User.find_by(name: agent), # because your ticket stores assign_to as string not id
+      user: User.find_by(email: agent),
       message: "You were assigned Ticket ##{ticket.ticket_id}",
       notifiable: ticket
     )
