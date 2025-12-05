@@ -2,11 +2,11 @@ module Api
   module Version1
     class TicketsController < ApplicationController
       before_action :authenticate_request
-      before_action :set_ticket, only: [ :show, :update, :change_status, :destroy, :assign ]
+      before_action :set_ticket, only: [ :show, :update, :destroy, :assign ]
 
       # RBAC
       # Only Admin + Agent can create, update, assign, or change status
-      before_action -> { authorize_role("admin", "agent") }, only: [ :create, :update, :assign, :change_status ]
+      before_action -> { authorize_role("admin", "agent") }, only: [ :create, :update, :assign ]
 
       # Only Admin can delete
       before_action -> { authorize_role("admin") }, only: [ :destroy ]
@@ -48,22 +48,30 @@ module Api
 
 
 
-      # POST /tickets (Admin + Agent only)
-      def create
+        # POST /tickets (Admin + Agent only)
+        def create
         ticket = Ticket.new(ticket_params)
 
-        if ticket.save
-            if ticket.assign_to.present?
-                NotificationService.ticket_assigned(ticket, ticket.assign_to)
+        # Check if assigned user exists **before saving**
+        if ticket.assign_to.present?
+            assigned_user = User.find_by(email: ticket.assign_to)
+
+            unless assigned_user
+            return render json: { error: "User '#{ticket.assign_to}' not found" }, status: :not_found
             end
-          render json: {
+        end
+
+        # Now save the ticket only if validations passed
+        if ticket.save
+            NotificationService.ticket_assigned(ticket, ticket.assign_to) if ticket.assign_to.present?
+            render json: {
             message: "Ticket created successfully",
             ticket: ticket
-          }, status: :created
+            }, status: :created
         else
-          render json: { errors: ticket.errors.full_messages }, status: :unprocessable_entity
+            render json: { errors: ticket.errors.full_messages }, status: :unprocessable_entity
         end
-      end
+        end
 
 
 
@@ -76,12 +84,27 @@ module Api
       end
 
 
-      # PATCH /tickets/:ticket_id (Admin + Agent)
-      def update
-        if @ticket.update(ticket_params)
-          render json: { message: "Ticket updated successfully", ticket: @ticket }, status: :ok
-        else
-          render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+        # PUT /tickets/:ticket_id (Admin + Agent)
+        def update
+        new_status = ticket_params[:status]
+
+        # If status is being updated, validate role permissions
+        if new_status.present?
+            case current_user.role
+            when "admin"
+            permitted = true
+            when "agent"
+            if @ticket.status == "resolved" && new_status == "open"
+                return render json: {
+                error: "Agents cannot reopen a resolved ticket. Only admins can do this."
+                }, status: :forbidden
+            end
+            permitted = true
+            else
+            render json: {
+                error: "Only Admins or Agents can update the ticket status."
+            }, status: :forbidden
+            end
         end
       end
 
@@ -92,12 +115,15 @@ module Api
         new_status = params[:status]
         @ticket.updated_by_role = current_user.role
 
-        begin
-            @ticket.change_status_to!(new_status)
-            NotificationService.ticket_status_changed(@ticket)
-            render json: { message: "Status updated successfully", ticket: @ticket }, status: :ok
-        rescue => e
-            render json: { error: e.message }, status: :unprocessable_entity
+        if @ticket.update(ticket_params)
+            NotificationService.ticket_status_changed(@ticket) if new_status.present?
+
+            render json: {
+            message: "Ticket updated successfully",
+            ticket: @ticket
+            }, status: :ok
+        else
+            render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
         end
         end
 
@@ -111,7 +137,7 @@ module Api
         user = User.find_by(id: assign_value) || User.find_by(email: assign_value)
 
         unless user
-        return render json: { error: "User '#{assign_value}' not found" }, status: :not_found
+        return render json: { error: "User '#{assign_value}' not found" }, status: :not_found unless user
         end
 
         assign_value = user.email
@@ -165,7 +191,7 @@ module Api
       end
 
       def ticket_params
-        (params[:ticket] || params).permit(:title, :description, :priority, :source, :requestor, :assign_to)
+        (params[:ticket] || params).permit(:title, :description, :priority, :source, :requestor, :assign_to, :status)
       end
     end
   end

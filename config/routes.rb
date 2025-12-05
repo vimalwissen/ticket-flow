@@ -13,7 +13,6 @@ Rails.application.routes.draw do
       resources :ticket_form_options, only: [:index]
       resources :tickets, param: :ticket_id do
         member do
-          patch :status, to: "tickets#change_status"
           patch :assign, to: "tickets#assign"
           put :update, to: "tickets#update"
           post   :watch, to: "watchers#create"
