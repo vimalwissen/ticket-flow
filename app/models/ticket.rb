@@ -5,6 +5,7 @@ class Ticket < ApplicationRecord
   belongs_to :assigned_user, class_name: "User", foreign_key: "assign_to", optional: true
 
   validates :description, :title, :requestor, presence: true
+  validate :validate_assign_to_user
 
   before_validation :normalize_status_value
   after_initialize :set_defaults, if: :new_record?
@@ -112,6 +113,10 @@ end
 
     self.status ||= "open"
     self.source ||= "email"
+  end
+  def validate_assign_to_user
+    return if assign_to.blank?
+    errors.add(:assign_to, "must belong to a registered user") unless User.exists?(email: assign_to)
   end
 
   # Attachment validations
