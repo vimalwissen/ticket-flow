@@ -32,7 +32,7 @@ class NotificationService
   def self.ticket_status_changed(ticket)
     return unless ticket.assign_to.present?
 
-    user = User.find_by(name: ticket.assign_to)
+    user = User.find_by(email: ticket.assign_to)
     return unless user
 
     create(
