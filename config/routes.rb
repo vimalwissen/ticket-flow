@@ -21,6 +21,8 @@ Rails.application.routes.draw do
           get  "comments", to: "comments#index"
           delete "comments/:id", to: "comments#destroy"
           post "attachment", to: "attachments#create"
+          get "attachment", to: "attachments#show"
+          delete "attachment", to: "attachments#destroy"
         end
       end
       resources :notifications, only: [ :index ] do
