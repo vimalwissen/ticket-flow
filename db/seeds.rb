@@ -56,4 +56,26 @@ end
 
 puts "Tickets seeded: #{Ticket.count}"
 
+puts "Seeding SLA Policies.."
+
+SlaPolicy.create!([
+  {
+    priority: "high",
+    first_response_minutes: 30,
+    resolution_minutes: 240
+  },
+  {
+    priority: "medium",
+    first_response_minutes: 60,
+    resolution_minutes: 480
+  },
+  {
+    priority: "low",
+    first_response_minutes: 120,
+    resolution_minutes: 1440
+  }
+])
+
+puts "SLA Policies seeded: #{SlaPolicy.count}"
+
 puts "Done seeding!"

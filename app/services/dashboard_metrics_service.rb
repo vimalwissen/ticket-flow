@@ -41,13 +41,13 @@ class DashboardMetricsService
 
   def overdue
     @tickets_scope
-      .where("created_at < ?", Date.today)
+      .where("target_resolution_at < ?", Date.today)
       .where.not(status: "closed")
       .count
   end
 
   def due_today
-    @tickets_scope.where(created_at: Date.today.all_day).count
+    @tickets_scope.where(target_resolution_at: Date.today.all_day).count
   end
 
   def open_tickets

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_11_28_094827) do
+ActiveRecord::Schema[8.1].define(version: 2025_12_08_104959) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -63,6 +63,16 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_28_094827) do
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
+  create_table "sla_policies", force: :cascade do |t|
+    t.boolean "active", default: true
+    t.datetime "created_at", null: false
+    t.integer "first_response_minutes"
+    t.string "priority", null: false
+    t.integer "resolution_minutes"
+    t.datetime "updated_at", null: false
+    t.index ["priority"], name: "index_sla_policies_on_priority", unique: true
+  end
+
   create_table "ticket_watchers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ticket_id"
@@ -76,8 +86,11 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_28_094827) do
     t.string "description"
     t.string "priority"
     t.string "requestor"
+    t.integer "sla_policy_id"
     t.string "source", default: "email"
     t.string "status", default: "open"
+    t.datetime "target_first_response_at"
+    t.datetime "target_resolution_at"
     t.string "ticket_id"
     t.string "title"
     t.datetime "updated_at", null: false
