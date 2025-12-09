@@ -10,7 +10,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :version1 do
       resources :users
-      resources :ticket_form_options, only: [:index]
+      resources :ticket_form_options, only: [ :index ]
       resources :tickets, param: :ticket_id do
         member do
           patch :assign, to: "tickets#assign"
@@ -25,6 +25,7 @@ Rails.application.routes.draw do
           delete "attachment", to: "attachments#destroy"
         end
       end
+      resources :sla_policies, only: [ :index, :show, :create, :update, :destroy ]
       resources :notifications, only: [ :index ] do
         member { patch :mark_read }
         collection { patch :mark_all_read }
