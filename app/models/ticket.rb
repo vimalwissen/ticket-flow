@@ -6,6 +6,7 @@ class Ticket < ApplicationRecord
 
   validates :description, :title, :requestor, presence: true
   validate :validate_assign_to_user
+  validate :validate_requestor_user 
 
   before_validation :normalize_status_value
   after_initialize :set_defaults, if: :new_record?
@@ -46,8 +47,6 @@ class Ticket < ApplicationRecord
 
   validate :validate_status_transition
 
-  # ---------- Methods ---------- #
-
   def change_status_to!(raw_new_status)
     assign_attributes(status: Ticket.normalize_status(raw_new_status))
     
@@ -69,8 +68,6 @@ class Ticket < ApplicationRecord
     return nil if value.nil?
     
     value = value.to_s.strip.downcase.gsub(/\s+/, "_")
-
-    # Fix common camelCase inputs
     value.gsub!("inprogress", "in_progress")
     value.gsub!("onhold", "on_hold")
 
@@ -114,9 +111,17 @@ end
     self.status ||= "open"
     self.source ||= "email"
   end
+
   def validate_assign_to_user
     return if assign_to.blank?
     errors.add(:assign_to, "must belong to a registered user") unless User.exists?(email: assign_to)
+  end
+
+  def validate_requestor_user
+    return if requestor.blank?
+    unless User.exists?(email: requestor)
+      errors.add(:requestor, "must be a valid registered user email")
+    end
   end
 
   # Attachment validations

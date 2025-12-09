@@ -27,7 +27,7 @@ module Api
         user_id: current_user.email
         )
     else # Consumer
-        tickets_scope = Ticket.where(requestor: current_user.email)
+        tickets_scope = Ticket.where(assign_to: current_user.email)
     end
 
     @q = tickets_scope.ransack(params[:q])
@@ -122,32 +122,41 @@ module Api
 
 
         
-    # PATCH /tickets/:ticket_id/assign (Admin + Agent)
-    def assign
-    assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
+        # PATCH /tickets/:ticket_id/assign (Admin + Agent)
+        def assign
+            assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
 
-    if assign_value.present?
-        user = User.find_by(id: assign_value) || User.find_by(email: assign_value)
+            # Normalize assignment value
+            if assign_value.present?
+                user = User.find_by(id: assign_value) || User.find_by(email: assign_value)
 
-        unless user
-        return render json: { error: "User '#{assign_value}' not found" }, status: :not_found unless user
+                unless user
+                return render json: { error: "User '#{assign_value}' not found" }, status: :not_found
+                end
+
+                assign_value = user.email
+            end
+
+            if @ticket.assign_to == assign_value
+                return render json: { 
+                message: assign_value.present? ?
+                    "Ticket is already assigned to #{assign_value}" :
+                    "Ticket is already unassigned"
+                }, status: :ok
+            end
+            if @ticket.update(assign_to: assign_value)
+                NotificationService.ticket_assigned(@ticket, assign_value) if assign_value.present?
+
+                render json: { 
+                message: assign_value.present? ?
+                    "Ticket assigned successfully" :
+                    "Ticket unassigned successfully",
+                ticket: @ticket.ticket_id
+                }, status: :ok
+            else
+                render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+            end
         end
-
-        assign_value = user.email
-    end
-
-    if @ticket.update(assign_to: assign_value)
-        # Only send notification **if a valid user was assigned**
-       NotificationService.ticket_assigned(@ticket, assign_value) if assign_value.present?
-
-        render json: { 
-        message: assign_value.present? ? "Ticket assigned successfully" : "Ticket unassigned successfully",
-        ticket: @ticket.ticket_id 
-        }, status: :ok
-    else
-        render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
-    end
-    end
 
       
       # DELETE /tickets/:ticket_id (Admin only)
