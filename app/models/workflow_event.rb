@@ -5,9 +5,6 @@ class WorkflowEvent < ApplicationRecord
 
   accepts_nested_attributes_for :nodes, allow_destroy: true
 
-  # Validations
-  # validates :flow, presence: true
-
   def find_node(logical_id)
     nodes.find_by(wf_node_id: logical_id)
   end

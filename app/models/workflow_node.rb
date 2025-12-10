@@ -22,7 +22,7 @@ class WorkflowNode < ApplicationRecord
     end
   end
 
-  before_save :set_derived_type
+  before_validation :set_derived_type
 
   private
 
