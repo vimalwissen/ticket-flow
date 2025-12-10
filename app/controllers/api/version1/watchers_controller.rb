@@ -4,7 +4,7 @@ module Api
       before_action :authenticate_request
       before_action :set_ticket
 
-      # POST /api/version1/tickets/:ticket_id/watch
+      # POST /api/version1/tickets/watch
       def create
         result = WatcherService.add(ticket: @ticket, user: current_user)
 
@@ -15,7 +15,7 @@ module Api
         end
       end
 
-      # DELETE /api/version1/tickets/:ticket_id/watch
+      # DELETE /api/version1/tickets/watch
       def destroy
         result = WatcherService.remove(ticket: @ticket, user: current_user)
         render json: result, status: :ok
