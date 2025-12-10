@@ -7,7 +7,6 @@ module Api
       def create
         @workflow = Workflow.new(workflow_params)
         
-        # Set defaults if not provided (matching user example)
         @workflow.status ||= 2 # Draft
         @workflow.module_id ||= 1 # Tickets
         
@@ -29,31 +28,21 @@ module Api
 
       # POST /ticket_automators/:id/event
       def create_event
-        # Payload: label=...&wf_node=1&data={...}&c=1&r=1
-        
-        # 1. Create/Find WorkflowEvent
-        # Assuming one main event per workflow for now (or finding by context).
-        # In this simplistic version, we'll assume we are creating the connection for the Workflow.
-        
-        # Parse Data JSON
         node_data = JSON.parse(params[:data]) rescue {}
 
         ActiveRecord::Base.transaction do
-          # Create Event Container
           @event = @workflow.events.create!(
             event_type: "ticket_created", # logic to derive this from data usually
             label: params[:label],
             flow: {} # Start empty
           )
 
-          # Create Trigger Node (ID 1)
           @node = @event.nodes.create!(
             wf_node_id: params[:wf_node],
             label: params[:label],
             data: node_data
           )
           
-          # Update Coordinate Config (additional_config)
           update_coordinates(params[:wf_node], params[:c], params[:r])
         end
 
@@ -62,34 +51,27 @@ module Api
 
       # PUT /ticket_automators/:id/node
       def create_node
-        # Payload: label=...&wf_node=...&data={...}&prev_node[id]=...
-        
         node_data = JSON.parse(params[:data]) rescue {}
         prev_node_id = params[:prev_node][:id]
         condition_result = params[:prev_node][:condition] # "1" or "0" if prev was Condition
 
         ActiveRecord::Base.transaction do
-          # Find the main event (Assuming single event chain for this ID)
           @event = @workflow.events.last 
 
-          # Create the Node
           @node = @event.nodes.create!(
             wf_node_id: params[:wf_node],
             label: params[:label],
             data: node_data
           )
 
-          # Update the Flow Graph (Adjacency List)
           update_flow_graph(prev_node_id, condition_result, params[:wf_node])
 
-          # Update Coordinates
           update_coordinates(params[:wf_node], params[:c], params[:r])
         end
 
         render json: node_response(@event, @node)
       end
 
-      # PUT /ticket_automators/:id/publish
       def publish
         @workflow.update!(status: 1)
         
@@ -120,24 +102,17 @@ module Api
       end
 
       def update_flow_graph(prev_id, condition_val, new_id)
-        # flow structure: { "1" => 20001, "20001" => { "1" => 30001 } }
         graph = @event.flow || {}
         
         if condition_val.present?
-          # Branching: Prev Node -> Condition -> New Node
-          # Ensure sub-hash exists
           graph[prev_id.to_s] ||= {} 
           
-          # If it was an integer (direct link) convert to hash? 
-          # (Scenario: changing generic link to conditional? Unlikely if prev is Condition node)
           if graph[prev_id.to_s].is_a?(Integer)
-             # This shouldn't happen if prev node is truly a condition, but safety check:
              graph[prev_id.to_s] = { "1" => graph[prev_id.to_s] }
           end
 
           graph[prev_id.to_s][condition_val.to_s] = new_id.to_i
         else
-          # Direct Link: Prev Node -> New Node
           graph[prev_id.to_s] = new_id.to_i
         end
 
