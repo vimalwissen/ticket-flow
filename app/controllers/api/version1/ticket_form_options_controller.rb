@@ -4,6 +4,13 @@ module Api
       # GET /ticket_form_options
       def index
         render json: {
+          status: {
+            open: "Open",
+            in_progress: "In Progress",
+            resolved: "Resolved",
+            on_hold: "On Hold",
+            closed: "Closed"
+          },
           priority: [
             { label: "Low", value: "low" },
             { label: "Medium", value: "medium" },
