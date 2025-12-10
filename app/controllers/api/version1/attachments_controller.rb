@@ -41,7 +41,7 @@ class Api::Version1::AttachmentsController < ApplicationController
   private
 
   def set_ticket
-    @ticket = Ticket.find_by(id: params[:ticket_id])
+    @ticket = Ticket.find_by(ticket_id: params[:ticket_id])
     return render json: { error: "Ticket not found" }, status: :not_found unless @ticket
   end
 
