@@ -6,7 +6,7 @@ class Ticket < ApplicationRecord
 
   validates :description, :title, :requestor, presence: true
   validate :validate_assign_to_user
-  validate :validate_requestor_user 
+  validate :validate_requestor_user
 
   before_validation :normalize_status_value
   after_initialize :set_defaults, if: :new_record?
@@ -18,15 +18,16 @@ class Ticket < ApplicationRecord
 
   before_create :generate_ticket_id
   # Final allowed statuses
-  STATUSES = %w[open in_progress on_hold resolved].freeze
+  STATUSES = %w[open in_progress on_hold resolved closed].freeze
   SOURCE=%w[email phone chat web].freeze
 
   # Allowed transitions
   TRANSITIONS = {
     "open" => %w[in_progress on_hold resolved],
-    "in_progress" => %w[on_hold resolved],
-    "on_hold" => %w[in_progress resolved],
-    "resolved" => [] 
+    "in_progress" => %w[on_hold resolved ],
+    "on_hold" => %w[in_progress resolved ],
+    "resolved" => [ "closed", "open" ], # 'open' only via admin override
+    "closed" => []
   }.freeze
 
   validates :status, inclusion: {
@@ -49,7 +50,7 @@ class Ticket < ApplicationRecord
 
   def change_status_to!(raw_new_status)
     assign_attributes(status: Ticket.normalize_status(raw_new_status))
-    
+
     unless valid?
       raise ArgumentError, errors.full_messages.join(", ")
     end
@@ -66,7 +67,7 @@ class Ticket < ApplicationRecord
 
   def self.normalize_status(value)
     return nil if value.nil?
-    
+
     value = value.to_s.strip.downcase.gsub(/\s+/, "_")
     value.gsub!("inprogress", "in_progress")
     value.gsub!("onhold", "on_hold")
@@ -74,24 +75,24 @@ class Ticket < ApplicationRecord
     value
   end
 
-  def validate_status_transition
-    return if new_record? # allow on create
+def validate_status_transition
+  return if new_record? # allow on create
 
-    normalized_previous = Ticket.normalize_status(status_was)
-    normalized_new = Ticket.normalize_status(status)
+  normalized_previous = Ticket.normalize_status(status_was)
+  normalized_new = Ticket.normalize_status(status)
 
-    # Allow updates that do NOT modify the status
-    return if normalized_previous == normalized_new
+  # Allow updates that do NOT modify the status
+  return if normalized_previous == normalized_new
 
-    allowed = TRANSITIONS[normalized_previous] || []
+  allowed = TRANSITIONS[normalized_previous] || []
 
-    # ---- ADMIN OVERRIDE CASE ----
-    if normalized_previous == "resolved" && normalized_new == "open"
-      return if updated_by_role == "admin"
-    end
+  # ---- ADMIN OVERRIDE CASE ----
+  if normalized_previous == "closed" && normalized_new == "open"
+    return if updated_by_role == "admin"
+  end
 
-    unless allowed.include?(normalized_new)
-      errors.add(:status, "cannot transition from '#{normalized_previous}' to '#{normalized_new}'. Allowed: #{allowed.join(', ')}")
+  unless allowed.include?(normalized_new)
+    errors.add(:status, "cannot transition from '#{normalized_previous}' to '#{normalized_new}'. Allowed: #{allowed.join(', ')}")
   end
 end
 
@@ -126,7 +127,7 @@ end
 
   # Attachment validations
   def attachment_size_limit
-    return unless attachment.attached?    
+    return unless attachment.attached?
     if attachment.blob.byte_size > 50.megabytes
       errors.add(:attachment, "must be less than 50MB")
       attachment.purge
@@ -149,10 +150,10 @@ end
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    ["assign_to", "created_at", "description", "id", "priority", "requestor", "source", "status", "ticket_id", "title", "updated_at"]
+    [ "assign_to", "created_at", "description", "id", "priority", "requestor", "source", "status", "ticket_id", "title", "updated_at" ]
   end
 
   def self.ransackable_associations(auth_object = nil)
-    ["comments"]
+    [ "comments" ]
   end
 end
