@@ -5,21 +5,22 @@ module Api
       def index
         render json: {
           status: [
-            { label: 'Open', value: 'open' },
-            { label: 'In Progress', value: 'in_progress' },
-            { label: 'Resolved', value: 'resolved' },
-            { label: 'On Hold', value: 'on_hold' }
+            { label: "Open", value: "open" },
+            { label: "In Progress", value: "in_progress" },
+            { label: "Resolved", value: "resolved" },
+            { label: "On Hold", value: "on_hold" },
+            { label: "Closed", value: "closed" }
           ],
           priority: [
-            { label: 'Low', value: 'low' },
-            { label: 'Medium', value: 'medium' },
-            { label: 'High', value: 'high' }
+            { label: "Low", value: "low" },
+            { label: "Medium", value: "medium" },
+            { label: "High", value: "high" }
           ],
           source: [
-            { label: 'Email', value: 'email' },
-            { label: 'Phone', value: 'phone' },
-            { label: 'Web', value: 'web' },
-            { label: 'Chat', value: 'chat' }
+            { label: "Email", value: "email" },
+            { label: "Phone", value: "phone" },
+            { label: "Web", value: "web" },
+            { label: "Chat", value: "chat" }
           ]
         }, status: :ok
       end
