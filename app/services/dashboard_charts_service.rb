@@ -23,7 +23,7 @@ class DashboardChartsService
       title: "Unresolved Tickets by Priority",
       data: priority_split.map do |priority, count|
         {
-          label: priority.to_s.capitalize,
+          label: priority.to_s.humanize,
           value: count,
           color: priority_color(priority)
         }
@@ -45,7 +45,7 @@ class DashboardChartsService
       title: "Unresolved Tickets by Status",
       data: status_split.map do |status, count|
         {
-          label: status.to_s.capitalize,
+          label: status.to_s.humanize,
           value: count,
           color: priority_color(status)
         }
@@ -67,7 +67,7 @@ class DashboardChartsService
       title: "New & My Open Tickets",
       data: priority_split.map do |priority, count|
         {
-          label: priority.to_s.capitalize,
+          label: priority.to_s.humanize,
           value: count,
           color: priority_color(priority)
         }
