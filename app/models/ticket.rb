@@ -7,23 +7,29 @@ class Ticket < ApplicationRecord
 
   validates :description, :title, :requestor, presence: true
   validate :validate_assign_to_user
+  validate :validate_requestor_user
 
   before_validation :normalize_status_value
   after_initialize :set_defaults, if: :new_record?
 
-  # NOTE: model validations only add errors — do NOT purge or enqueue jobs here.
+  # --- Attachment Validations (SAFE: no purge here) ---
   validate :attachment_size_limit
   validate :attachment_type_validation
 
   before_create :generate_ticket_id
 
-  STATUSES = %w[open in_progress on_hold resolved].freeze
-  SOURCE = %w[email phone chat web].freeze
+  # -------------------------------
+  # STATUS CONSTANTS (merged)
+  # -------------------------------
+  STATUSES = %w[open in_progress on_hold resolved closed].freeze
+  SOURCE   = %w[email phone chat web].freeze
+
   TRANSITIONS = {
-    "open" => %w[in_progress on_hold resolved],
-    "in_progress" => %w[on_hold resolved],
-    "on_hold" => %w[in_progress resolved],
-    "resolved" => []
+    "open"         => %w[in_progress on_hold resolved],
+    "in_progress"  => %w[on_hold resolved],
+    "on_hold"      => %w[in_progress resolved],
+    "resolved"     => %w[closed open],  # open allowed only by admin
+    "closed"       => []
   }.freeze
 
   validates :status, inclusion: { in: STATUSES, message: "must be one of: #{STATUSES.join(', ')}" }
@@ -34,13 +40,16 @@ class Ticket < ApplicationRecord
 
   validate :validate_status_transition
 
-  # ---------- Methods ---------- #
-
+  # ===============================
+  #       STATUS LOGIC
+  # ===============================
   def change_status_to!(raw_new_status)
     assign_attributes(status: Ticket.normalize_status(raw_new_status))
+
     unless valid?
       raise ArgumentError, errors.full_messages.join(", ")
     end
+
     save!
   end
 
@@ -53,29 +62,41 @@ class Ticket < ApplicationRecord
 
   def self.normalize_status(value)
     return nil if value.nil?
+
     value = value.to_s.strip.downcase.gsub(/\s+/, "_")
     value.gsub!("inprogress", "in_progress")
     value.gsub!("onhold", "on_hold")
+
     value
   end
 
   def validate_status_transition
     return if new_record?
-    normalized_previous = Ticket.normalize_status(status_was)
-    normalized_new = Ticket.normalize_status(status)
-    return if normalized_previous == normalized_new
-    allowed = TRANSITIONS[normalized_previous] || []
 
-    # admin override
-    if normalized_previous == "resolved" && normalized_new == "open"
+    previous = Ticket.normalize_status(status_was)
+    new_val  = Ticket.normalize_status(status)
+
+    return if previous == new_val
+
+    allowed = TRANSITIONS[previous] || []
+
+    # ADMIN OVERRIDE
+    if previous == "resolved" && new_val == "open"
       return if updated_by_role == "admin"
     end
 
-    unless allowed.include?(normalized_new)
-      errors.add(:status, "cannot transition from '#{normalized_previous}' to '#{normalized_new}'. Allowed: #{allowed.join(', ')}")
+    if previous == "closed" && new_val == "open"
+      return if updated_by_role == "admin"
+    end
+
+    unless allowed.include?(new_val)
+      errors.add(:status, "cannot transition from '#{previous}' to '#{new_val}'. Allowed: #{allowed.join(', ')}")
     end
   end
 
+  # ===============================
+  #      PRIVATE HELPERS
+  # ===============================
   private
 
   def normalize_status_value
@@ -97,8 +118,15 @@ class Ticket < ApplicationRecord
     errors.add(:assign_to, "must belong to a registered user") unless User.exists?(email: assign_to)
   end
 
-  # Safe attachment validations — only add errors; DO NOT purge here.
-  MAX_ATTACHMENT_BYTES = 10.megabytes.freeze
+  def validate_requestor_user
+    return if requestor.blank?
+    errors.add(:requestor, "must be a valid registered user email") unless User.exists?(email: requestor)
+  end
+
+  # --------------------------
+  # Attachment Validations
+  # --------------------------
+  MAX_ATTACHMENT_BYTES = 10.megabytes
   ALLOWED_CONTENT_TYPES = %w[
     application/pdf
     application/msword
@@ -109,24 +137,25 @@ class Ticket < ApplicationRecord
 
   def attachment_size_limit
     return unless attachment.attached?
-    # guard against unpersisted blob or nil id — use safe navigation
-    blob_size = attachment.blob&.byte_size
-    # if blob_size is nil we avoid raising and add a generic error (rare)
-    if blob_size.nil?
-      errors.add(:attachment, "could not determine file size")
+
+    byte_size = attachment.blob&.byte_size
+    if byte_size.nil?
+      errors.add(:attachment, "could not read file size")
       return
     end
 
-    if blob_size > MAX_ATTACHMENT_BYTES
+    if byte_size > MAX_ATTACHMENT_BYTES
       errors.add(:attachment, "file size must be less than #{MAX_ATTACHMENT_BYTES / 1.megabyte} MB")
     end
   end
 
   def attachment_type_validation
     return unless attachment.attached?
+
     content_type = attachment.blob&.content_type
+
     if content_type.nil?
-      errors.add(:attachment, "could not determine content type")
+      errors.add(:attachment, "could not detect content type")
       return
     end
 
@@ -135,11 +164,14 @@ class Ticket < ApplicationRecord
     end
   end
 
-  def self.ransackable_attributes(auth_object = nil)
-    ["assign_to", "created_at", "description", "id", "priority", "requestor", "source", "status", "ticket_id", "title", "updated_at"]
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[
+      assign_to created_at description id priority requestor source
+      status ticket_id title updated_at
+    ]
   end
 
-  def self.ransackable_associations(auth_object = nil)
+  def self.ransackable_associations(_auth_object = nil)
     ["comments"]
   end
 end

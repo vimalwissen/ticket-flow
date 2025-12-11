@@ -10,13 +10,11 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :version1 do
       resources :users
-      resources :ticket_form_options, only: [:index]
+      resources :ticket_form_options, only: [ :index ]
       resources :tickets, param: :ticket_id do
         member do
           patch :assign, to: "tickets#assign"
           put :update, to: "tickets#update"
-          post   :watch, to: "watchers#create"
-          delete :watch, to: "watchers#destroy"
           post "comments", to: "comments#create"
           get  "comments", to: "comments#index"
           delete "comments/:id", to: "comments#destroy"
@@ -24,10 +22,17 @@ Rails.application.routes.draw do
           get "attachment", to: "attachments#show"
           delete "attachment", to: "attachments#destroy"
         end
+        collection do
+          post   :watch,  to: "watchers#create"
+          delete :watch, to: "watchers#destroy"
+        end
       end
+      resources :sla_policies, only: [ :index, :show, :create, :update, :destroy ]
       resources :notifications, only: [ :index ] do
-        member { patch :mark_read }
-        collection { patch :mark_all_read }
+        collection do
+          patch :mark_read
+          patch :mark_all_read
+        end
       end
 
       get "dashboard/summary", to: "dashboard#summary"

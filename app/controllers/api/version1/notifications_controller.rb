@@ -9,7 +9,7 @@ module Api
         render json: notifications.map { |n| serialize(n) }
       end
 
-      # /api/version1/notifications/:id/mark_read
+      # /api/version1/notifications/mark_read
       def mark_read
         notification = current_user.notifications.find(params[:id])
         NotificationService.mark_read(notification)
