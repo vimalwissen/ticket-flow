@@ -4,17 +4,29 @@ class Api::Version1::AttachmentsController < ApplicationController
 
   # POST /api/version1/tickets/:ticket_id/attachment
   def create
-    return render json: { error: "Attachment missing" }, status: :bad_request unless params[:attachment].present?
+    unless params[:attachment].present?
+      return render json: { error: "Attachment missing" }, status: :bad_request
+    end
 
-    # Remove old attachment if exists
+    # If replacing existing file — remove old attachment first (optional behaviour)
     @ticket.attachment.purge if @ticket.attachment.attached?
 
-    # Attach new file
+    # Attach new file (this creates an in-memory blob; may not have id yet)
     @ticket.attachment.attach(params[:attachment])
 
-    if @ticket.save
-      render json: { message: "Attachment uploaded successfully" }, status: :created
+    # Validate first — model validations will add errors if any (size/type)
+    if @ticket.valid?
+      # Save persists blob association and ticket
+      if @ticket.save
+        render json: { message: "Attachment uploaded successfully" }, status: :created
+      else
+        # Rare: save failed for other reasons — cleanup the newly attached blob
+        @ticket.attachment.purge if @ticket.attachment.attached?
+        render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+      end
     else
+      # Validation failed (e.g. size/type). Purge newly attached blob to avoid orphan blob.
+      @ticket.attachment.purge if @ticket.attachment.attached?
       render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
     end
   end
@@ -22,7 +34,6 @@ class Api::Version1::AttachmentsController < ApplicationController
   # GET /api/version1/tickets/:ticket_id/attachment
   def show
     attachment = @ticket.attachment
-
     render json: {
       filename: attachment.filename.to_s,
       content_type: attachment.content_type,
@@ -34,8 +45,12 @@ class Api::Version1::AttachmentsController < ApplicationController
 
   # DELETE /api/version1/tickets/:ticket_id/attachment
   def destroy
-    @ticket.attachment.purge
-    render json: { message: "Attachment removed successfully" }, status: :ok
+    if @ticket.attachment.attached?
+      @ticket.attachment.purge
+      render json: { message: "Attachment removed successfully" }, status: :ok
+    else
+      render json: { error: "No attachment to remove" }, status: :not_found
+    end
   end
 
   private
