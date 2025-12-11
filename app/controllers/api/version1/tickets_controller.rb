@@ -64,7 +64,11 @@ module Api
         # Now save the ticket only if validations passed
         if ticket.save
             SlaAssignmentService.apply(ticket)
-            NotificationService.ticket_assigned(ticket, ticket.assign_to) if ticket.assign_to.present?
+            NotificationService.ticket_event(
+              ticket: ticket,
+              actor: current_user,
+              message: "#{current_user.name} created Ticket ##{ticket.ticket_id}"
+            )
             render json: {
             message: "Ticket created successfully",
             ticket: ticket
@@ -111,7 +115,18 @@ module Api
 
         if @ticket.update(ticket_params)
             SlaAssignmentService.apply(@ticket) if ticket_params[:priority].present?
-            NotificationService.ticket_status_changed(@ticket) if new_status.present?
+            message =
+              if ticket_params[:status].present?
+                "#{current_user.name} changed status to #{ticket_params[:status]}"
+              else
+                "#{current_user.name} updated Ticket ##{@ticket.ticket_id}"
+              end
+
+            NotificationService.ticket_event(
+              ticket: @ticket,
+              actor: current_user,
+              message: message
+            )
 
             render json: {
             message: "Ticket updated successfully",
@@ -147,7 +162,11 @@ module Api
                 }, status: :ok
             end
             if @ticket.update(assign_to: assign_value)
-                NotificationService.ticket_assigned(@ticket, assign_value) if assign_value.present?
+                NotificationService.ticket_event(
+                  ticket: @ticket,
+                  actor: current_user,
+                  message: "#{current_user.name} assigned Ticket to #{assign_value || 'none'}"
+                )
 
                 render json: {
                 message: assign_value.present? ?
