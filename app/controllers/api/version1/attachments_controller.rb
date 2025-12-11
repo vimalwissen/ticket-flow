@@ -4,17 +4,39 @@ class Api::Version1::AttachmentsController < ApplicationController
 
   # POST /api/version1/tickets/:ticket_id/attachment
   def create
-    return render json: { error: "Attachment missing" }, status: :bad_request unless params[:attachment].present?
+    uploaded_file = params[:attachment]
+
+    return render json: { error: "Attachment missing" }, status: :bad_request unless uploaded_file.present?
+
+    # --- VALIDATE SIZE BEFORE ATTACHING ---
+    if uploaded_file.size > 10.megabytes
+      return render json: { error: "File size must be less than 10 MB" }, status: :unprocessable_entity
+    end
+
+    # --- VALIDATE ALLOWED TYPES ---
+    allowed = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/x-msdownload",
+      "application/vnd.microsoft.portable-executable"
+    ]
+
+    unless allowed.include?(uploaded_file.content_type)
+      return render json: { error: "File must be PDF / DOC / DOCX / EXE" }, status: :unprocessable_entity
+    end
 
     # Remove old attachment if exists
     @ticket.attachment.purge if @ticket.attachment.attached?
 
-    # Attach new file
-    @ticket.attachment.attach(params[:attachment])
+    # --- SAFE ATTACHMENT ---
+    @ticket.attachment.attach(uploaded_file)
 
     if @ticket.save
       render json: { message: "Attachment uploaded successfully" }, status: :created
     else
+      # Safety: ensure no invalid blob stays attached
+      @ticket.attachment.purge if @ticket.attachment.attached?
       render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
     end
   end
@@ -41,8 +63,9 @@ class Api::Version1::AttachmentsController < ApplicationController
   private
 
   def set_ticket
-    @ticket = Ticket.find_by(ticket_id: params[:ticket_id])
-    return render json: { error: "Ticket not found" }, status: :not_found unless @ticket
+    @ticket = Ticket.find_by!(ticket_id: params[:ticket_id])
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "Ticket not found" }, status: :not_found
   end
 
   def check_attachment_presence

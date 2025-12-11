@@ -9,7 +9,6 @@ class Ticket < ApplicationRecord
 
   before_validation :normalize_status_value
   after_initialize :set_defaults, if: :new_record?
-  has_one_attached :attachment
 
   validate :attachment_size_limit
   validate :attachment_type_validation
@@ -95,8 +94,8 @@ class Ticket < ApplicationRecord
 
     unless allowed.include?(normalized_new)
       errors.add(:status, "cannot transition from '#{normalized_previous}' to '#{normalized_new}'. Allowed: #{allowed.join(', ')}")
+    end  
   end
-end
 
   private
 
@@ -119,12 +118,14 @@ end
     errors.add(:assign_to, "must belong to a registered user") unless User.exists?(email: assign_to)
   end
 
-  # Attachment validations
-  def attachment_size_limit
-    return unless attachment.attached?    
-    if attachment.blob.byte_size > 50.megabytes
-      errors.add(:attachment, "must be less than 50MB")
-      attachment.purge
+ def attachment_size_limit
+    return unless attachment.attached?
+
+    # PREVENT ActiveJob serialization error
+    attachment.blob.reload
+
+    if attachment.blob.byte_size > 10.megabytes
+      errors.add(:attachment, "file size must be less than 10 MB")
     end
   end
 
@@ -135,11 +136,12 @@ end
       application/pdf
       application/msword
       application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      application/x-msdownload
+      application/vnd.microsoft.portable-executable
     ]
 
     unless allowed_types.include?(attachment.content_type)
-      errors.add(:attachment, "must be PDF or DOC/DOCX")
-      attachment.purge
+      errors.add(:attachment, "must be PDF / DOC / DOCX / EXE format")
     end
   end
 
