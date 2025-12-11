@@ -4,38 +4,28 @@ class Api::Version1::AttachmentsController < ApplicationController
 
   # POST /api/version1/tickets/:ticket_id/attachment
   def create
-    uploaded_file = params[:attachment]
-
-    return render json: { error: "Attachment missing" }, status: :bad_request unless uploaded_file.present?
-
-    # --- VALIDATE SIZE BEFORE ATTACHING ---
-    if uploaded_file.size > 10.megabytes
-      return render json: { error: "File size must be less than 10 MB" }, status: :unprocessable_entity
+    unless params[:attachment].present?
+      return render json: { error: "Attachment missing" }, status: :bad_request
     end
 
-    # --- VALIDATE ALLOWED TYPES ---
-    allowed = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/x-msdownload",
-      "application/vnd.microsoft.portable-executable"
-    ]
-
-    unless allowed.include?(uploaded_file.content_type)
-      return render json: { error: "File must be PDF / DOC / DOCX / EXE" }, status: :unprocessable_entity
-    end
-
-    # Remove old attachment if exists
+    # If replacing existing file — remove old attachment first (optional behaviour)
     @ticket.attachment.purge if @ticket.attachment.attached?
 
-    # --- SAFE ATTACHMENT ---
-    @ticket.attachment.attach(uploaded_file)
+    # Attach new file (this creates an in-memory blob; may not have id yet)
+    @ticket.attachment.attach(params[:attachment])
 
-    if @ticket.save
-      render json: { message: "Attachment uploaded successfully" }, status: :created
+    # Validate first — model validations will add errors if any (size/type)
+    if @ticket.valid?
+      # Save persists blob association and ticket
+      if @ticket.save
+        render json: { message: "Attachment uploaded successfully" }, status: :created
+      else
+        # Rare: save failed for other reasons — cleanup the newly attached blob
+        @ticket.attachment.purge if @ticket.attachment.attached?
+        render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+      end
     else
-      # Safety: ensure no invalid blob stays attached
+      # Validation failed (e.g. size/type). Purge newly attached blob to avoid orphan blob.
       @ticket.attachment.purge if @ticket.attachment.attached?
       render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
     end
@@ -44,7 +34,6 @@ class Api::Version1::AttachmentsController < ApplicationController
   # GET /api/version1/tickets/:ticket_id/attachment
   def show
     attachment = @ticket.attachment
-
     render json: {
       filename: attachment.filename.to_s,
       content_type: attachment.content_type,
@@ -56,16 +45,19 @@ class Api::Version1::AttachmentsController < ApplicationController
 
   # DELETE /api/version1/tickets/:ticket_id/attachment
   def destroy
-    @ticket.attachment.purge
-    render json: { message: "Attachment removed successfully" }, status: :ok
+    if @ticket.attachment.attached?
+      @ticket.attachment.purge
+      render json: { message: "Attachment removed successfully" }, status: :ok
+    else
+      render json: { error: "No attachment to remove" }, status: :not_found
+    end
   end
 
   private
 
   def set_ticket
-    @ticket = Ticket.find_by!(ticket_id: params[:ticket_id])
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: "Ticket not found" }, status: :not_found
+    @ticket = Ticket.find_by(ticket_id: params[:ticket_id])
+    return render json: { error: "Ticket not found" }, status: :not_found unless @ticket
   end
 
   def check_attachment_presence
