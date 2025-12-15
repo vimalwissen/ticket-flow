@@ -5,12 +5,22 @@ ENV RACK_ENV=production
 
 WORKDIR /app
 
-# Install dependencies
+# Install system dependencies (including ActiveStorage requirements)
 RUN apt-get update && apt-get install -y \
-    build-essential git curl \
-    libpq-dev postgresql postgresql-contrib \
-    supervisor && \
-    rm -rf /var/lib/apt/lists/*
+    build-essential \
+    git \
+    curl \
+    libpq-dev \
+    postgresql \
+    postgresql-contrib \
+    supervisor \
+    # ---- ActiveStorage dependencies ----
+    imagemagick \
+    libvips \
+    ffmpeg \
+    poppler-utils \
+    # -----------------------------------
+    && rm -rf /var/lib/apt/lists/*
 
 # Gems
 COPY Gemfile Gemfile.lock ./
@@ -20,8 +30,7 @@ RUN bundle config set without 'development test' && \
 # Copy App
 COPY . .
 
-# --- FIX 1: Add a dummy key for build-time precompilation ---
-# Rails needs A key to boot for precompilation, but it doesn't need to be the real one.
+# Dummy key for build-time precompilation
 RUN SECRET_KEY_BASE=dummy bundle exec bootsnap precompile app/ lib/
 
 # Setup Directories
