@@ -1,6 +1,7 @@
 class Ticket < ApplicationRecord
   has_many :comments, dependent: :destroy
   has_one_attached :attachment
+
   attr_accessor :updated_by_role
   belongs_to :assigned_user, class_name: "User", foreign_key: "assign_to", optional: true
 
@@ -10,44 +11,38 @@ class Ticket < ApplicationRecord
 
   before_validation :normalize_status_value
   after_initialize :set_defaults, if: :new_record?
-  has_one_attached :attachment
 
+  # --- Attachment Validations (SAFE: no purge here) ---
   validate :attachment_size_limit
   validate :attachment_type_validation
 
-
   before_create :generate_ticket_id
-  # Final allowed statuses
-  STATUSES = %w[open in_progress on_hold resolved closed].freeze
-  SOURCE=%w[email phone chat web].freeze
 
-  # Allowed transitions
+  # -------------------------------
+  # STATUS CONSTANTS (merged)
+  # -------------------------------
+  STATUSES = %w[open in_progress on_hold resolved closed].freeze
+  SOURCE   = %w[email phone chat web].freeze
+
   TRANSITIONS = {
-    "open" => %w[in_progress on_hold resolved],
-    "in_progress" => %w[on_hold resolved ],
-    "on_hold" => %w[in_progress resolved ],
-    "resolved" => [ "closed", "open" ], # 'open' only via admin override
-    "closed" => []
+    "open"         => %w[in_progress on_hold resolved],
+    "in_progress"  => %w[on_hold resolved],
+    "on_hold"      => %w[in_progress resolved],
+    "resolved"     => %w[closed open],  # open allowed only by admin
+    "closed"       => []
   }.freeze
 
-  validates :status, inclusion: {
-    in: STATUSES,
-    message: "must be one of: #{STATUSES.join(', ')}"
-  }
-  validates :source, inclusion: {
-    in: SOURCE,
-    message: "must be one of: #{SOURCE.join(', ')}"
-  }
+  validates :status, inclusion: { in: STATUSES, message: "must be one of: #{STATUSES.join(', ')}" }
+  validates :source, inclusion: { in: SOURCE, message: "must be one of: #{SOURCE.join(', ')}" }
 
-  # Priority validation
   PRIORITIES = %w[low medium high].freeze
-  validates :priority, inclusion: {
-    in: PRIORITIES,
-    message: "must be one of: #{PRIORITIES.join(', ')}"
-  }
+  validates :priority, inclusion: { in: PRIORITIES, message: "must be one of: #{PRIORITIES.join(', ')}" }
 
   validate :validate_status_transition
 
+  # ===============================
+  #       STATUS LOGIC
+  # ===============================
   def change_status_to!(raw_new_status)
     assign_attributes(status: Ticket.normalize_status(raw_new_status))
 
@@ -57,10 +52,10 @@ class Ticket < ApplicationRecord
 
     save!
   end
+
   def can_transition_to?(raw_new_status)
     normalized_new = Ticket.normalize_status(raw_new_status)
     normalized_current = Ticket.normalize_status(self.status)
-
     allowed = TRANSITIONS[normalized_current] || []
     allowed.include?(normalized_new)
   end
@@ -75,27 +70,33 @@ class Ticket < ApplicationRecord
     value
   end
 
-def validate_status_transition
-  return if new_record? # allow on create
+  def validate_status_transition
+    return if new_record?
 
-  normalized_previous = Ticket.normalize_status(status_was)
-  normalized_new = Ticket.normalize_status(status)
+    previous = Ticket.normalize_status(status_was)
+    new_val  = Ticket.normalize_status(status)
 
-  # Allow updates that do NOT modify the status
-  return if normalized_previous == normalized_new
+    return if previous == new_val
 
-  allowed = TRANSITIONS[normalized_previous] || []
+    allowed = TRANSITIONS[previous] || []
 
-  # ---- ADMIN OVERRIDE CASE ----
-  if normalized_previous == "closed" && normalized_new == "open"
-    return if updated_by_role == "admin"
+    # ADMIN OVERRIDE
+    if previous == "resolved" && new_val == "open"
+      return if updated_by_role == "admin"
+    end
+
+    if previous == "closed" && new_val == "open"
+      return if updated_by_role == "admin"
+    end
+
+    unless allowed.include?(new_val)
+      errors.add(:status, "cannot transition from '#{previous}' to '#{new_val}'. Allowed: #{allowed.join(', ')}")
+    end
   end
 
-  unless allowed.include?(normalized_new)
-    errors.add(:status, "cannot transition from '#{normalized_previous}' to '#{normalized_new}'. Allowed: #{allowed.join(', ')}")
-  end
-end
-
+  # ===============================
+  #      PRIVATE HELPERS
+  # ===============================
   private
 
   def normalize_status_value
@@ -108,7 +109,6 @@ end
 
   def set_defaults
     return unless new_record?
-
     self.status ||= "open"
     self.source ||= "email"
   end
@@ -120,40 +120,58 @@ end
 
   def validate_requestor_user
     return if requestor.blank?
-    unless User.exists?(email: requestor)
-      errors.add(:requestor, "must be a valid registered user email")
-    end
+    errors.add(:requestor, "must be a valid registered user email") unless User.exists?(email: requestor)
   end
 
-  # Attachment validations
+  # --------------------------
+  # Attachment Validations
+  # --------------------------
+  MAX_ATTACHMENT_BYTES = 10.megabytes
+  ALLOWED_CONTENT_TYPES = %w[
+    application/pdf
+    application/msword
+    application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    application/x-msdownload
+    application/vnd.microsoft.portable-executable
+  ].freeze
+
   def attachment_size_limit
     return unless attachment.attached?
-    if attachment.blob.byte_size > 50.megabytes
-      errors.add(:attachment, "must be less than 50MB")
-      attachment.purge
+
+    byte_size = attachment.blob&.byte_size
+    if byte_size.nil?
+      errors.add(:attachment, "could not read file size")
+      return
+    end
+
+    if byte_size > MAX_ATTACHMENT_BYTES
+      errors.add(:attachment, "file size must be less than #{MAX_ATTACHMENT_BYTES / 1.megabyte} MB")
     end
   end
 
   def attachment_type_validation
     return unless attachment.attached?
 
-    allowed_types = %w[
-      application/pdf
-      application/msword
-      application/vnd.openxmlformats-officedocument.wordprocessingml.document
-    ]
+    content_type = attachment.blob&.content_type
 
-    unless allowed_types.include?(attachment.content_type)
-      errors.add(:attachment, "must be PDF or DOC/DOCX")
-      attachment.purge
+    if content_type.nil?
+      errors.add(:attachment, "could not detect content type")
+      return
+    end
+
+    unless ALLOWED_CONTENT_TYPES.include?(content_type)
+      errors.add(:attachment, "must be PDF / DOC / DOCX / EXE format")
     end
   end
 
-  def self.ransackable_attributes(auth_object = nil)
-    [ "assign_to", "created_at", "description", "id", "priority", "requestor", "source", "status", "ticket_id", "title", "updated_at" ]
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[
+      assign_to created_at description id priority requestor source
+      status ticket_id title updated_at
+    ]
   end
 
-  def self.ransackable_associations(auth_object = nil)
-    [ "comments" ]
+  def self.ransackable_associations(_auth_object = nil)
+    ["comments"]
   end
 end
