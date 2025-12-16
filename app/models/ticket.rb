@@ -131,8 +131,6 @@ class Ticket < ApplicationRecord
     application/pdf
     application/msword
     application/vnd.openxmlformats-officedocument.wordprocessingml.document
-    application/x-msdownload
-    application/vnd.microsoft.portable-executable
   ].freeze
 
   def attachment_size_limit
@@ -160,7 +158,7 @@ class Ticket < ApplicationRecord
     end
 
     unless ALLOWED_CONTENT_TYPES.include?(content_type)
-      errors.add(:attachment, "must be PDF / DOC / DOCX / EXE format")
+      errors.add(:attachment, "must be PDF / DOC / DOCX format")
     end
   end
 
