@@ -36,19 +36,25 @@ class Api::Version1::AttachmentsController < ApplicationController
     unless @ticket.attachment.attached?
       return render json: {
         message: "No attachment found for this ticket"
-      }, status: :ok
+      }, status: :not_found
     end
 
-    attachment = @ticket.attachment
+    blob = @ticket.attachment.blob
 
     render json: {
-      filename: attachment.filename.to_s,
-      content_type: attachment.content_type,
-      byte_size: attachment.byte_size,
-      url: url_for(attachment),
-      created_at: attachment.created_at
+      filename: blob.filename.to_s,
+      content_type: blob.content_type,
+      byte_size: blob.byte_size,
+      url: rails_blob_url(
+        blob,
+        disposition: "attachment",
+        route: :rails_service_blob_proxy
+      ),
+      created_at: blob.created_at
     }, status: :ok
   end
+
+
 
   # DELETE /api/version1/tickets/:ticket_id/attachment
   def destroy
