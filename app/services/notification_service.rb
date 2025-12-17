@@ -1,12 +1,4 @@
 class NotificationService
-  def self.create(user:, message:, notifiable: nil)
-    Notification.create!(
-      user: user,
-      message: message,
-      notifiable: notifiable
-    )
-  end
-
   def self.mark_read(notification)
     notification.update!(read_at: Time.current)
   end
@@ -19,26 +11,20 @@ class NotificationService
     user.notifications.order(created_at: :desc).limit(limit)
   end
 
-  # === Event Hooks ===
+  def self.ticket_event(ticket:, actor:, message:)
+    recipients = User.where(role: "admin").to_a
 
-  def self.ticket_assigned(ticket, agent)
-    create(
-      user: User.find_by(email: agent),
-      message: "You were assigned Ticket ##{ticket.ticket_id}",
-      notifiable: ticket
-    )
-  end
+    recipients << User.find_by(email: ticket.assign_to) if ticket.assign_to.present?
+    recipients << User.find_by(email: ticket.requestor)
 
-  def self.ticket_status_changed(ticket)
-    return unless ticket.assign_to.present?
+    recipients = recipients.compact.uniq - [ actor ]
 
-    user = User.find_by(email: ticket.assign_to)
-    return unless user
-
-    create(
-      user: user,
-      message: "Status updated for Ticket ##{ticket.ticket_id}: #{ticket.status}",
-      notifiable: ticket
-    )
+    recipients.each do |user|
+      Notification.create!(
+        user: user,
+        message: message,
+        notifiable: ticket
+      )
+    end
   end
 end

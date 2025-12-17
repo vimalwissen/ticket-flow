@@ -2,20 +2,20 @@ module Api
   module Version1
     class TicketsController < ApplicationController
       before_action :authenticate_request
-      before_action :set_ticket, only: [:show, :update, :destroy, :assign]
+      before_action :set_ticket, only: [ :show, :update, :destroy, :assign ]
 
       # RBAC
       # Only Admin + Agent can create, update, assign, or change status
-      before_action -> { authorize_role("admin", "agent") }, only: [:create, :update, :assign]
+      before_action -> { authorize_role("admin", "agent") }, only: [ :create, :update, :assign ]
 
       # Only Admin can delete
-      before_action -> { authorize_role("admin") }, only: [:destroy]
+      before_action -> { authorize_role("admin") }, only: [ :destroy ]
 
       # All authenticated users (including consumers) can view tickets (index/show)
-      before_action :require_login, only: [:index, :show]
+      before_action :require_login, only: [ :index, :show ]
 
 
-      # GET /tickets
+    # GET /tickets
     def index
     case current_user.role
     when "admin"
@@ -27,7 +27,7 @@ module Api
         user_id: current_user.email
         )
     else # Consumer
-        tickets_scope = Ticket.where(requestor: current_user.email)
+        tickets_scope = Ticket.where(assign_to: current_user.email)
     end
 
     @q = tickets_scope.ransack(params[:q])
@@ -47,8 +47,8 @@ module Api
     end
 
 
-      
-      # POST /tickets (Admin + Agent only)
+
+        # POST /tickets (Admin + Agent only)
         def create
         ticket = Ticket.new(ticket_params)
 
@@ -63,7 +63,12 @@ module Api
 
         # Now save the ticket only if validations passed
         if ticket.save
-            NotificationService.ticket_assigned(ticket, ticket.assign_to) if ticket.assign_to.present?
+            SlaAssignmentService.apply(ticket)
+            NotificationService.ticket_event(
+              ticket: ticket,
+              actor: current_user,
+              message: "#{current_user.name} created Ticket ##{ticket.ticket_id}"
+            )
             render json: {
             message: "Ticket created successfully",
             ticket: ticket
@@ -84,7 +89,7 @@ module Api
       end
 
 
-      # PUT /tickets/:ticket_id (Admin + Agent)
+        # PUT /tickets/:ticket_id (Admin + Agent)
         def update
         new_status = ticket_params[:status]
 
@@ -95,21 +100,33 @@ module Api
             permitted = true
             when "agent"
             if @ticket.status == "resolved" && new_status == "open"
-                return render json: { 
-                error: "Agents cannot reopen a resolved ticket. Only admins can do this." 
+                return render json: {
+                error: "Agents cannot reopen a resolved ticket. Only admins can do this."
                 }, status: :forbidden
             end
             permitted = true
             else
-            return render json: { 
-                error: "Only Admins or Agents can update the ticket status." 
+            return render json: {
+                error: "Only Admins or Agents can update the ticket status."
             }, status: :forbidden
             end
         end
         @ticket.updated_by_role = current_user.role
 
         if @ticket.update(ticket_params)
-            NotificationService.ticket_status_changed(@ticket) if new_status.present?
+            SlaAssignmentService.apply(@ticket) if ticket_params[:priority].present?
+            message =
+              if ticket_params[:status].present?
+                "#{current_user.name} changed status to #{ticket_params[:status]}"
+              else
+                "#{current_user.name} updated Ticket ##{@ticket.ticket_id}"
+              end
+
+            NotificationService.ticket_event(
+              ticket: @ticket,
+              actor: current_user,
+              message: message
+            )
 
             render json: {
             message: "Ticket updated successfully",
@@ -121,35 +138,48 @@ module Api
         end
 
 
-        
-    # PATCH /tickets/:ticket_id/assign (Admin + Agent)
-    def assign
-    assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
 
-    if assign_value.present?
-        user = User.find_by(id: assign_value) || User.find_by(email: assign_value)
+        # PATCH /tickets/:ticket_id/assign (Admin + Agent)
+        def assign
+            assign_value = params[:assign_to] == "none" ? nil : params[:assign_to]
 
-        unless user
-        return render json: { error: "User '#{assign_value}' not found" }, status: :not_found unless user
+            # Normalize assignment value
+            if assign_value.present?
+                user = User.find_by(id: assign_value) || User.find_by(email: assign_value)
+
+                unless user
+                return render json: { error: "User '#{assign_value}' not found" }, status: :not_found
+                end
+
+                assign_value = user.email
+            end
+
+            if @ticket.assign_to == assign_value
+                return render json: {
+                message: assign_value.present? ?
+                    "Ticket is already assigned to #{assign_value}" :
+                    "Ticket is already unassigned"
+                }, status: :ok
+            end
+            if @ticket.update(assign_to: assign_value)
+                NotificationService.ticket_event(
+                  ticket: @ticket,
+                  actor: current_user,
+                  message: "#{current_user.name} assigned Ticket to #{assign_value || 'none'}"
+                )
+
+                render json: {
+                message: assign_value.present? ?
+                    "Ticket assigned successfully" :
+                    "Ticket unassigned successfully",
+                ticket: @ticket.ticket_id
+                }, status: :ok
+            else
+                render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
+            end
         end
 
-        assign_value = user.email
-    end
 
-    if @ticket.update(assign_to: assign_value)
-        # Only send notification **if a valid user was assigned**
-       NotificationService.ticket_assigned(@ticket, assign_value) if assign_value.present?
-
-        render json: { 
-        message: assign_value.present? ? "Ticket assigned successfully" : "Ticket unassigned successfully",
-        ticket: @ticket.ticket_id 
-        }, status: :ok
-    else
-        render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
-    end
-    end
-
-      
       # DELETE /tickets/:ticket_id (Admin only)
       def destroy
         @ticket.destroy
@@ -170,7 +200,7 @@ module Api
           render json: {
             error: "Access Denied: Required role(s): #{allowed_roles.join(', ')}"
           }, status: :forbidden
-          return
+          nil
         end
       end
 
@@ -184,8 +214,8 @@ module Api
       end
 
       def ticket_params
-        (params[:ticket] || params).permit(:title, :description, :priority, :source, :requestor, :assign_to,:status)
+        (params[:ticket] || params).permit(:title, :description, :priority, :source, :requestor, :assign_to, :status)
       end
     end
- end
+  end
 end
