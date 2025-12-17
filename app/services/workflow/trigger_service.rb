@@ -5,10 +5,11 @@ class Workflow
       # Assuming event_type string match. 
       # Simplification: Fetch all active workflows and check first event
       
-      Workflow.active.find_each do |wf|
+      # Find active workflows that specifically handle this event_name
+      Workflow.active.joins(:events).where(workflow_events: { event_type: event_name }).find_each do |wf|
         start_event = wf.events.find_by(event_type: event_name)
         if start_event
-          puts "Triggering Workflow #{wf.id} for event #{event_name}"
+          Rails.logger.info "Triggering Workflow #{wf.id} (#{wf.name}) for event #{event_name}"
           Workflow::Processor.new.execute(start_event, context)
         end
       end

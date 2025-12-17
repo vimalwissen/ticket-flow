@@ -8,7 +8,8 @@ class Workflow
       # 2. Traversal Loop
       loop do
         # Execute the current node's logic
-        executor = Workflow::Executors::Factory.build(current_node)
+        # REFACTORED: Use Services instead of Models
+        executor = Workflow::Nodes::Factory.build(current_node)
         result = executor.execute(current_node, context)
 
         # 3. Determine Next Node ID from Flow
