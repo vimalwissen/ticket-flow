@@ -36,7 +36,7 @@ class Api::Version1::AttachmentsController < ApplicationController
     unless @ticket.attachment.attached?
       return render json: {
         message: "No attachment found for this ticket"
-      }, status: :not_found
+      }, status: :ok
     end
 
     blob = @ticket.attachment.blob
