@@ -1,12 +1,12 @@
 class Workflow
-  module Executors
+  module Nodes
     class Condition < Base
       def execute(node, context)
         Rails.logger.info "Execute Condition: #{node.label} (Data: #{node.data})"
 
         # 1. Validate Context
         unless context.is_a?(Ticket)
-          Rails.logger.warn "Condition Executor: Context is not a Ticket"
+          Rails.logger.warn "Condition Node: Context is not a Ticket"
           return "0"
         end
 
@@ -16,14 +16,13 @@ class Workflow
         target_val = node.data['value']
 
         if field_name.blank? || operator.blank?
-          Rails.logger.warn "Condition Executor: Missing configuration (field or operator)"
+          Rails.logger.warn "Condition Node: Missing configuration (field or operator)"
           return "0" # Default fail/false
         end
 
         # 3. Fetch Actual Value from Ticket
-        # Safe send to avoid arbitrary method execution vulnerabilities
         unless context.respond_to?(field_name)
-          Rails.logger.warn "Condition Executor: Ticket does not respond to '#{field_name}'"
+          Rails.logger.warn "Condition Node: Ticket does not respond to '#{field_name}'"
           return "0"
         end
         
