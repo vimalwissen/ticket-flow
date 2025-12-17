@@ -26,6 +26,25 @@ module Api
         end
       end
 
+      # PUT/PATCH /ticket_automators/:id
+      def update
+        if @workflow.update(workflow_params)
+          render json: {
+            status: true,
+            item: {
+              id: @workflow.id,
+              name: @workflow.name,
+              module_id: @workflow.module_id,
+              workspace_id: @workflow.workspace_id,
+              status: @workflow.status,
+              description: @workflow.description
+            }
+          }
+        else
+          render json: { errors: @workflow.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
+
       # POST /ticket_automators/:id/event
       def create_event
         node_data = JSON.parse(params[:data]) rescue {}

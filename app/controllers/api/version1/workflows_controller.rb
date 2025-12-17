@@ -1,7 +1,7 @@
 module Api
   module Version1
     class WorkflowsController < ApplicationController
-      before_action :set_workflow, only: [:show, :update, :destroy]
+      before_action :set_workflow, only: [:show, :destroy]
 
       # GET /api/version1/workflows
       def index
@@ -14,25 +14,9 @@ module Api
         render json: single_workflow_json(@workflow)
       end
 
-      # POST /api/version1/workflows
-      def create
-        @workflow = Workflow.new(workflow_params)
 
-        if @workflow.save
-          render json: single_workflow_json(@workflow), status: :created
-        else
-          render json: { errors: @workflow.errors.full_messages }, status: :unprocessable_entity
-        end
-      end
 
-      # PUT/PATCH /api/version1/workflows/:id
-      def update
-        if @workflow.update(workflow_params)
-          render json: single_workflow_json(@workflow)
-        else
-          render json: { errors: @workflow.errors.full_messages }, status: :unprocessable_entity
-        end
-      end
+
 
       # DELETE /api/version1/workflows/:id
       def destroy
@@ -46,18 +30,7 @@ module Api
         @workflow = Workflow.find(params[:id])
       end
 
-      def workflow_params
-        params.require(:workflow).permit(
-          :name, :description, :status, :module_id, :workspace_id, :workflow_type,
-          additional_config: {},
-          events_attributes: [
-            :id, :label, :event_type, :flow, :_destroy,
-            nodes_attributes: [
-              :id, :wf_node_id, :label, :node_type, :data, :_destroy
-            ]
-          ]
-        )
-      end
+
 
       def structured_json(workflows)
         workflows.map { |w| single_workflow_json(w) }

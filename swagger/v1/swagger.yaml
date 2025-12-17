@@ -1,0 +1,212 @@
+---
+openapi: 3.0.1
+info:
+  title: Ticket Flow API
+  version: v1
+  description: API documentation for Ticket Flow workflow system
+paths:
+  "/api/version1/ticket_automators":
+    post:
+      summary: Creates a Ticket Automator (Workflow)
+      tags:
+      - Ticket Automators
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '201':
+          description: workflow created
+        '422':
+          description: invalid request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                workspace_id:
+                  type: integer
+                workflow_type:
+                  type: string
+              required:
+              - name
+  "/api/version1/ticket_automators/{id}":
+    put:
+      summary: Updates a Ticket Automator
+      tags:
+      - Ticket Automators
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: workflow updated
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: integer
+  "/api/version1/ticket_automators/{id}/event":
+    post:
+      summary: Creates an Event Node
+      tags:
+      - Ticket Automators
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: event created
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                wf_node:
+                  type: integer
+                data:
+                  type: string
+                  description: JSON string of node data
+                c:
+                  type: integer
+                r:
+                  type: integer
+              required:
+              - label
+              - wf_node
+  "/api/version1/ticket_automators/{id}/node":
+    put:
+      summary: Creates a Logic Node
+      tags:
+      - Ticket Automators
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: node created
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                wf_node:
+                  type: integer
+                data:
+                  type: string
+                  description: JSON string of node data
+                prev_node:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    condition:
+                      type: string
+                c:
+                  type: integer
+                r:
+                  type: integer
+              required:
+              - label
+              - wf_node
+              - prev_node
+  "/api/version1/ticket_automators/{id}/publish":
+    put:
+      summary: Publishes the Workflow
+      tags:
+      - Ticket Automators
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: workflow published
+  "/api/version1/workflows":
+    get:
+      summary: Lists all Workflows
+      tags:
+      - Workflows
+      security:
+      - bearer_auth: []
+      responses:
+        '200':
+          description: list of workflows
+  "/api/version1/workflows/{id}":
+    get:
+      summary: Retrieves a Workflow
+      tags:
+      - Workflows
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: workflow found
+        '404':
+          description: workflow not found
+    delete:
+      summary: Deletes a Workflow
+      tags:
+      - Workflows
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: workflow deleted
+components:
+  securitySchemes:
+    bearer_auth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+servers:
+- url: http://localhost:3000
+  description: Development server
