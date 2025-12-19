@@ -23,6 +23,7 @@ Rails.application.routes.draw do
           delete "comments/:id", to: "comments#destroy"
           post "attachment", to: "attachments#create"
           get "attachment", to: "attachments#show"
+          get "attachment/download", to: "attachments#download"
           delete "attachment", to: "attachments#destroy"
         end
         collection do

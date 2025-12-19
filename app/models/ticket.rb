@@ -6,6 +6,10 @@ class Ticket < ApplicationRecord
   belongs_to :assigned_user, class_name: "User", foreign_key: "assign_to", optional: true
 
   validates :description, :title, :requestor, presence: true
+  validates :title, length: { maximum: 100, message: "cannot exceed 100 characters" }
+  validates :description, length: { maximum: 5000, message: "cannot exceed 5000 characters" }
+  validates :requestor, format: { with: URI::MailTo::EMAIL_REGEXP, message: "must be a valid email address" }
+  validates :assign_to, format: { with: URI::MailTo::EMAIL_REGEXP, message: "must be a valid email address" }, allow_blank: true
   validate :validate_assign_to_user
   validate :validate_requestor_user
 
@@ -143,6 +147,10 @@ class Ticket < ApplicationRecord
     application/pdf
     application/msword
     application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    image/jpeg
+    image/png
+    image/gif
+    image/webp
   ].freeze
 
   def attachment_size_limit
@@ -170,7 +178,7 @@ class Ticket < ApplicationRecord
     end
 
     unless ALLOWED_CONTENT_TYPES.include?(content_type)
-      errors.add(:attachment, "must be PDF / DOC / DOCX format")
+      errors.add(:attachment, "must be PDF, DOC, DOCX, or image (JPEG, PNG, GIF, WEBP) format")
     end
   end
 
