@@ -78,7 +78,7 @@ RSpec.describe 'Workflows API', type: :request do
             }
           }
 
-        let!(:workflow) { Workflow.create!(name: 'Demo', status: 1) }
+        let!(:workflow) { Workflow.create!(name: 'Demo', status: 1, module_id: 1) }
         run_test!
       end
     end
@@ -127,7 +127,7 @@ RSpec.describe 'Workflows API', type: :request do
             events: { type: :object }
           }
         
-        let(:wf) { Workflow.create!(name: 'Demo', status: 1) }
+        let(:wf) { Workflow.create!(name: 'Demo', status: 1, module_id: 1) }
         let(:id) { wf.id }
         run_test!
       end
