@@ -52,9 +52,7 @@ RSpec.describe 'Attachments API', type: :request do
 
         let(:attachment) { nil }
 
-        run_test! do
-          post "/api/version1/tickets/#{ticket_id}/attachment", headers: { 'Authorization' => Authorization }
-        end
+        run_test!
       end
 
       response '409', 'Attachment already exists' do
