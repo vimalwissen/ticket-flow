@@ -8,24 +8,23 @@ class Api::Version1::AttachmentsController < ApplicationController
       return render json: { error: "Attachment missing" }, status: :bad_request
     end
 
-    # If replacing existing file — remove old attachment first (optional behaviour)
-    @ticket.attachment.purge if @ticket.attachment.attached?
+    # Reject if attachment already exists
+    if @ticket.attachment.attached?
+      return render json: { error: "Attachment already exists. Please delete the existing attachment first." }, status: :conflict
+    end
 
-    # Attach new file (this creates an in-memory blob; may not have id yet)
+    # Attach new file
     @ticket.attachment.attach(params[:attachment])
 
-    # Validate first — model validations will add errors if any (size/type)
+    # Validate the attachment
     if @ticket.valid?
-      # Save persists blob association and ticket
       if @ticket.save
         render json: { message: "Attachment uploaded successfully" }, status: :created
       else
-        # Rare: save failed for other reasons — cleanup the newly attached blob
         @ticket.attachment.purge if @ticket.attachment.attached?
         render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
       end
     else
-      # Validation failed (e.g. size/type). Purge newly attached blob to avoid orphan blob.
       @ticket.attachment.purge if @ticket.attachment.attached?
       render json: { errors: @ticket.errors.full_messages }, status: :unprocessable_entity
     end
@@ -45,11 +44,6 @@ class Api::Version1::AttachmentsController < ApplicationController
       filename: blob.filename.to_s,
       content_type: blob.content_type,
       byte_size: blob.byte_size,
-      url: rails_blob_url(
-        blob,
-        disposition: "attachment",
-        route: :rails_service_blob_proxy
-      ),
       created_at: blob.created_at
     }, status: :ok
   end
@@ -64,6 +58,19 @@ class Api::Version1::AttachmentsController < ApplicationController
     else
       render json: { error: "No attachment to remove" }, status: :not_found
     end
+  end
+
+  # GET /api/version1/tickets/:ticket_id/attachment/download
+  def download
+    unless @ticket.attachment.attached?
+      return render json: { error: "No attachment found for this ticket" }, status: :not_found
+    end
+
+    blob = @ticket.attachment.blob
+    send_data blob.download,
+              filename: blob.filename.to_s,
+              type: blob.content_type,
+              disposition: "attachment"
   end
 
   private

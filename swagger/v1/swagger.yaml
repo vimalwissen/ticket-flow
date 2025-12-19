@@ -5,6 +5,156 @@ info:
   version: v1
   description: API documentation for Ticket Flow workflow system
 paths:
+  "/api/version1/tickets/{ticket_id}/attachment":
+    parameters:
+    - name: ticket_id
+      in: path
+      description: Ticket ID
+      required: true
+      schema:
+        type: string
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Upload attachment
+      tags:
+      - Attachments
+      parameters: []
+      responses:
+        '201':
+          description: Attachment uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Attachment uploaded successfully
+        '400':
+          description: Attachment missing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Attachment missing
+        '409':
+          description: Attachment already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Attachment already exists. Please delete the existing
+                      attachment first.
+        '422':
+          description: Invalid file type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: file
+        required: true
+        description: File to upload (PDF, DOC, DOCX, or images)
+    get:
+      summary: Get attachment metadata
+      tags:
+      - Attachments
+      responses:
+        '200':
+          description: No attachment found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filename:
+                    type: string
+                    example: document.pdf
+                  content_type:
+                    type: string
+                    example: application/pdf
+                  byte_size:
+                    type: integer
+                    example: 12345
+                  created_at:
+                    type: string
+                    format: date-time
+                  message:
+                    type: string
+                    example: No attachment found for this ticket
+    delete:
+      summary: Delete attachment
+      tags:
+      - Attachments
+      responses:
+        '200':
+          description: Attachment deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Attachment removed successfully
+        '404':
+          description: No attachment to remove
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: No attachment to remove
+  "/api/version1/tickets/{ticket_id}/attachment/download":
+    parameters:
+    - name: ticket_id
+      in: path
+      description: Ticket ID
+      required: true
+      schema:
+        type: string
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Download attachment file
+      tags:
+      - Attachments
+      responses:
+        '200':
+          description: File download
+        '404':
+          description: No attachment found
+          content:
+            application/octet-stream:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: No attachment found for this ticket
   "/api/version1/ticket_automators":
     post:
       summary: Creates a Ticket Automator (Workflow)
@@ -173,6 +323,350 @@ paths:
       responses:
         '200':
           description: workflow published
+  "/api/version1/tickets":
+    get:
+      summary: List all tickets
+      tags:
+      - Tickets
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        description: Page number
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: Items per page
+        schema:
+          type: integer
+      - name: q[status_eq]
+        in: query
+        required: false
+        description: Filter by status
+        schema:
+          type: string
+      - name: q[priority_eq]
+        in: query
+        required: false
+        description: Filter by priority
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Tickets retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  tickets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ticket_id:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        status:
+                          type: string
+                        priority:
+                          type: string
+                        source:
+                          type: string
+                        requestor:
+                          type: string
+                        assign_to:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                      next_page:
+                        type: integer
+                        nullable: true
+                      prev_page:
+                        type: integer
+                        nullable: true
+                      total_pages:
+                        type: integer
+                      total_count:
+                        type: integer
+    post:
+      summary: Create a ticket
+      tags:
+      - Tickets
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Ticket created successfully
+                  ticket:
+                    type: object
+        '422':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Cannot login to system
+                  maxLength: 100
+                description:
+                  type: string
+                  example: Getting error when trying to login
+                  maxLength: 5000
+                priority:
+                  type: string
+                  enum:
+                  - low
+                  - medium
+                  - high
+                  example: high
+                source:
+                  type: string
+                  enum:
+                  - email
+                  - phone
+                  - web
+                  - chat
+                  example: email
+                requestor:
+                  type: string
+                  example: customer@example.com
+                assign_to:
+                  type: string
+                  example: agent@example.com
+                  nullable: true
+              required:
+              - title
+              - description
+              - requestor
+  "/api/version1/tickets/{ticket_id}":
+    parameters:
+    - name: ticket_id
+      in: path
+      description: Ticket ID
+      required: true
+      schema:
+        type: string
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Get a ticket
+      tags:
+      - Tickets
+      responses:
+        '200':
+          description: Ticket found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  ticket:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      ticket_id:
+                        type: string
+                      title:
+                        type: string
+                      description:
+                        type: string
+                      status:
+                        type: string
+                      priority:
+                        type: string
+                      source:
+                        type: string
+                      requestor:
+                        type: string
+                      assign_to:
+                        type: string
+                        nullable: true
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Ticket not found
+    put:
+      summary: Update a ticket
+      tags:
+      - Tickets
+      parameters: []
+      responses:
+        '200':
+          description: Ticket updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Ticket updated successfully
+                  ticket:
+                    type: object
+        '422':
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                  - open
+                  - in_progress
+                  - on_hold
+                  - resolved
+                  - closed
+                priority:
+                  type: string
+                  enum:
+                  - low
+                  - medium
+                  - high
+                assign_to:
+                  type: string
+                  nullable: true
+    delete:
+      summary: Delete a ticket
+      tags:
+      - Tickets
+      responses:
+        '200':
+          description: Ticket deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Ticket deleted successfully
+  "/api/version1/tickets/{ticket_id}/assign":
+    parameters:
+    - name: ticket_id
+      in: path
+      description: Ticket ID
+      required: true
+      schema:
+        type: string
+    - name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+    patch:
+      summary: Assign ticket to user
+      tags:
+      - Tickets
+      parameters: []
+      responses:
+        '200':
+          description: Ticket assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  ticket:
+                    type: string
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assign_to:
+                  type: string
+                  description: User email or "none" to unassign
+              required:
+              - assign_to
   "/api/version1/workflows":
     get:
       summary: Lists all Workflows
@@ -375,6 +869,116 @@ paths:
       responses:
         '204':
           description: workflow deleted
+  "/auth/login":
+    post:
+      summary: User login
+      tags:
+      - Authentication
+      parameters: []
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT access token
+                  refresh_token:
+                    type: string
+                    description: Refresh token for getting new access tokens
+                  role:
+                    type: string
+                    example: admin
+                    description: User role
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Invalid email or password
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: password123
+              required:
+              - email
+              - password
+  "/auth/refresh":
+    post:
+      summary: Refresh access token
+      tags:
+      - Authentication
+      parameters: []
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Invalid refresh token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+                  description: Valid refresh token
+              required:
+              - refresh_token
+  "/auth/logout":
+    post:
+      summary: User logout
+      tags:
+      - Authentication
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out
 components:
   securitySchemes:
     bearer_auth:
