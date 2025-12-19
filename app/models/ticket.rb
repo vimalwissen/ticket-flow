@@ -1,6 +1,6 @@
 class Ticket < ApplicationRecord
   has_many :comments, dependent: :destroy
-  has_one_attached :attachment
+  has_one_attached :attachment , dependent: :purge_later
 
   attr_accessor :updated_by_role
   belongs_to :assigned_user, class_name: "User", foreign_key: "assign_to", optional: true
