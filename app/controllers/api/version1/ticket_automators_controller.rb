@@ -62,7 +62,7 @@ module Api
             data: node_data
           )
           
-          update_coordinates(params[:wf_node], params[:c], params[:r])
+          update_coordinates(params[:wf_node], params[:x], params[:y])
         end
 
         render json: event_response(@event, @node)
@@ -85,7 +85,7 @@ module Api
 
           update_flow_graph(prev_node_id, condition_result, params[:wf_node])
 
-          update_coordinates(params[:wf_node], params[:c], params[:r])
+          update_coordinates(params[:wf_node], params[:x], params[:y])
         end
 
         render json: node_response(@event, @node)
@@ -114,9 +114,10 @@ module Api
         params.permit(:name, :description, :module_id, :workspace_id, :workflow_type)
       end
 
-      def update_coordinates(node_id, col, row)
+      def update_coordinates(node_id, x, y)
         conf = @workflow.additional_config || {}
-        conf[node_id.to_s] = { "c" => col, "r" => row }
+        conf["positions"] ||= {}
+        conf["positions"][node_id.to_s] = { "x" => x, "y" => y }
         @workflow.update!(additional_config: conf)
       end
 

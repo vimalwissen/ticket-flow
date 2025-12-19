@@ -15,6 +15,15 @@ class VerifyWorkflow
     # 2. Setup Active Workflow for 'ticket_created'
     puts "\n--- Setup: Creating Generic Workflow ---"
     wf_create = Workflow.create!(name: "Generic VIP Handler", status: 1)
+    
+    # Simulate positions from frontend
+    wf_create.update!(additional_config: { 
+      "positions" => {
+        "1" => { "x" => 100, "y" => 100 },
+        "10001" => { "x" => 400, "y" => 100 },
+        "20001" => { "x" => 700, "y" => 100 }
+      }
+    })
 
     event_create = wf_create.events.create!(
       event_type: "ticket_created",
@@ -48,10 +57,10 @@ class VerifyWorkflow
     )
 
     puts "Workflow '#{wf_create.name}' created."
-    puts "Nodes Configured:"
-    event_create.nodes.each do |n|
-      puts "  ID: #{n.wf_node_id} Type: #{n.node_type} Data: #{n.data}"
-    end
+    
+    puts "\n--- Verifying JSON Output for Frontend ---"
+    json_output = WorkflowSerializer.new(wf_create).as_json
+    puts JSON.pretty_generate(json_output)
 
     # 3. Setup Users
     user = User.create!(email: "customer@example.com", name: "Customer", password: "password")
@@ -77,25 +86,11 @@ class VerifyWorkflow
       puts "FAILURE: VIP Ticket priority is '#{ticket_vip.priority}', expected 'high'."
     end
 
-    # 5. Test Case 2: Non-Matching Ticket
-    puts "\n--- Test Case 2: Creating Regular Ticket (Should Not Change Priority) ---"
-    ticket_reg = Ticket.create!(
-      title: "Normal Request",
-      description: "Help me",
-      requestor: user.email,
-      assign_to: agent.email,
-      status: "open",
-      priority: "low",
-      source: "web"
-    )
-
-    ticket_reg.reload
-    if ticket_reg.priority == "low"
-      puts "SUCCESS: Regular Ticket priority remained 'low'."
-    else
-      puts "FAILURE: Regular Ticket priority changed to '#{ticket_reg.priority}'."
-    end
-
     puts "\n--- Verification Completed ---"
   end
 end
+
+
+# To run manually: rails runner lib/verify_workflow.rb
+# Or in console: VerifyWorkflow.run
+

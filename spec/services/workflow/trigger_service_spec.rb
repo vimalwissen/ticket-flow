@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe Workflow::TriggerService do
-  let(:user) { User.create!(email: 'test@example.com', name: 'Test', password: 'password') }
-  let(:agent) { User.create!(email: 'agent@example.com', name: 'Agent', password: 'password') }
+  let(:user) { User.find_or_create_by!(email: 'test@example.com', name: 'Test') { |u| u.password = 'password' } }
+  let(:agent) { User.find_or_create_by!(email: 'agent@example.com', name: 'Agent') { |u| u.password = 'password' } }
 
   describe '#call' do
     context 'with active workflows' do

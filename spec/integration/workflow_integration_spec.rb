@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe 'Workflow Integration', type: :request do
-  let(:user) { User.create!(email: 'customer@example.com', name: 'Customer', password: 'password') }
-  let(:agent) { User.create!(email: 'agent@example.com', name: 'Agent', password: 'password') }
+  let(:user) { User.find_or_create_by!(email: 'customer@example.com', name: 'Customer') { |u| u.password = 'password' } }
+  let(:agent) { User.find_or_create_by!(email: 'agent@example.com', name: 'Agent') { |u| u.password = 'password' } }
 
   describe 'Ticket Creation Triggers Workflow' do
     let!(:workflow) { Workflow.create!(name: 'VIP Handler', status: 1) }

@@ -1,7 +1,7 @@
 require 'swagger_helper'
 
 RSpec.describe 'Ticket Automators API', type: :request do
-  let(:auth_user) { User.create!(email: 'admin@example.com', name: 'Admin', password: 'password') }
+  let(:auth_user) { User.find_or_create_by!(email: 'admin@example.com', name: 'Admin') { |u| u.password = 'password' } }
   let(:Authorization) { "Bearer #{JsonWebToken.encode(user_id: auth_user.id)}" }
 
   path '/api/version1/ticket_automators' do
@@ -71,16 +71,23 @@ RSpec.describe 'Ticket Automators API', type: :request do
           label: { type: :string },
           wf_node: { type: :integer },
           data: { type: :string, description: 'JSON string of node data' },
-          c: { type: :integer },
-          r: { type: :integer }
+          x: { type: :integer },
+          y: { type: :integer }
         },
-        required: ['label', 'wf_node']
+        required: ['label', 'wf_node'],
+        example: {
+          label: "Ticket is raised",
+          wf_node: "1",
+          data: "{}",
+          x: 100,
+          y: 100
+        }
       }
 
       response '200', 'event created' do
         let(:wf) { Workflow.create!(name: 'Draft', status: 2) }
         let(:id) { wf.id }
-        let(:event_params) { { label: 'Start', wf_node: 1, c: 100, r: 100 } }
+        let(:event_params) { { label: 'Start', wf_node: 1, x: 100, y: 100 } }
         run_test!
       end
     end
@@ -106,10 +113,21 @@ RSpec.describe 'Ticket Automators API', type: :request do
               condition: { type: :string }
             }
           },
-          c: { type: :integer },
-          r: { type: :integer }
+          x: { type: :integer },
+          y: { type: :integer }
         },
-        required: ['label', 'wf_node', 'prev_node']
+        required: ['label', 'wf_node', 'prev_node'],
+        example: {
+          label: "Category is Payroll?",
+          wf_node: "30001",
+          data: "{}",
+          prev_node: {
+            id: "1",
+            condition: ""
+          },
+          x: 400,
+          y: 100
+        }
       }
 
       response '200', 'node created' do
@@ -121,8 +139,8 @@ RSpec.describe 'Ticket Automators API', type: :request do
           label: 'Check Priority', 
           wf_node: 10001, 
           prev_node: { id: 1 },
-          c: 200, 
-          r: 100 
+          x: 200, 
+          y: 100 
         } }
         run_test!
       end

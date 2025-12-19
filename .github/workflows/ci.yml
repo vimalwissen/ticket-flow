@@ -64,7 +64,7 @@ jobs:
             sleep 1
           done
 
-      - name: Run Rails tests
+      - name: Run RSpec
         env:
           RAILS_ENV: test
           DATABASE_URL: postgres://postgres:password@localhost:5432/ticket_flow_test
@@ -72,4 +72,6 @@ jobs:
           bundle check || bundle install --jobs 4 --retry 3
           bin/rails db:create || true
           bin/rails db:schema:load
-          bin/rails test
+          bundle exec rspec
+
+

@@ -91,13 +91,19 @@ paths:
                 data:
                   type: string
                   description: JSON string of node data
-                c:
+                x:
                   type: integer
-                r:
+                "y":
                   type: integer
               required:
               - label
               - wf_node
+              example:
+                label: Ticket is raised
+                wf_node: '1'
+                data: "{}"
+                x: 100
+                "y": 100
   "/api/version1/ticket_automators/{id}/node":
     put:
       summary: Creates a Logic Node
@@ -134,14 +140,23 @@ paths:
                       type: integer
                     condition:
                       type: string
-                c:
+                x:
                   type: integer
-                r:
+                "y":
                   type: integer
               required:
               - label
               - wf_node
               - prev_node
+              example:
+                label: Category is Payroll?
+                wf_node: '30001'
+                data: "{}"
+                prev_node:
+                  id: '1'
+                  condition: ''
+                x: 400
+                "y": 100
   "/api/version1/ticket_automators/{id}/publish":
     put:
       summary: Publishes the Workflow
@@ -168,6 +183,114 @@ paths:
       responses:
         '200':
           description: list of workflows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    description:
+                      type: string
+                      nullable: true
+                    status:
+                      type: integer
+                    module_id:
+                      type: integer
+                    workspace_id:
+                      type: integer
+                      nullable: true
+                    created_at:
+                      type: string
+                      format: date-time
+                    positions:
+                      type: object
+                      additionalProperties: true
+                    events:
+                      type: object
+                      additionalProperties:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          event_type:
+                            type: string
+                          entry_node:
+                            type: string
+                          nodes:
+                            type: object
+                            additionalProperties:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                label:
+                                  type: string
+                                type:
+                                  type: string
+                                ports:
+                                  type: object
+                                  properties:
+                                    inputs:
+                                      type: array
+                                      items:
+                                        type: string
+                                    outputs:
+                                      type: array
+                                      items:
+                                        type: string
+                                data:
+                                  type: object
+                                  additionalProperties: true
+                          connections:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                from:
+                                  type: object
+                                  properties:
+                                    node:
+                                      type: string
+                                    port:
+                                      type: string
+                                to:
+                                  type: object
+                                  properties:
+                                    node:
+                                      type: string
+                                    port:
+                                      type: string
+    post:
+      summary: Creates a Workflow
+      tags:
+      - Workflows
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '201':
+          description: workflow created
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                positions:
+                  type: object
+                events:
+                  type: object
+              required:
+              - name
   "/api/version1/workflows/{id}":
     get:
       summary: Retrieves a Workflow
@@ -184,8 +307,59 @@ paths:
       responses:
         '200':
           description: workflow found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  description:
+                    type: string
+                    nullable: true
+                  status:
+                    type: integer
+                  module_id:
+                    type: integer
+                  workspace_id:
+                    type: integer
+                    nullable: true
+                  created_at:
+                    type: string
+                    format: date-time
+                  positions:
+                    type: object
+                  events:
+                    type: object
         '404':
           description: workflow not found
+    put:
+      summary: Updates a Workflow
+      tags:
+      - Workflows
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: workflow updated
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                positions:
+                  type: object
     delete:
       summary: Deletes a Workflow
       tags:

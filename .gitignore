@@ -35,5 +35,7 @@
 
 prompt.md
 .github/copilot-instructions.md
-bin/*
-.kamal/*
+/.kamal/
+/coverage/
+
+
