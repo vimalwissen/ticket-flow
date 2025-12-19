@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_12_08_104959) do
+ActiveRecord::Schema[8.1].define(version: 2025_12_08_113620) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -108,8 +108,62 @@ ActiveRecord::Schema[8.1].define(version: 2025_12_08_104959) do
     t.index ["refresh_token"], name: "index_users_on_refresh_token"
   end
 
+  create_table "workflow_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_type"
+    t.jsonb "flow", default: {}, comment: "Adjacency map for execution flow"
+    t.string "label"
+    t.datetime "updated_at", null: false
+    t.bigint "workflow_id", null: false
+    t.index ["workflow_id"], name: "index_workflow_events_on_workflow_id"
+  end
+
+  create_table "workflow_executions", force: :cascade do |t|
+    t.jsonb "context", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.integer "current_wf_node_id", comment: "Pointer to current logical step"
+    t.jsonb "logs", default: [], array: true
+    t.string "status", default: "pending", null: false
+    t.bigint "ticket_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "workflow_event_id", null: false
+    t.bigint "workflow_id", null: false
+    t.index ["ticket_id", "status"], name: "index_workflow_executions_on_ticket_id_and_status"
+    t.index ["ticket_id"], name: "index_workflow_executions_on_ticket_id"
+    t.index ["workflow_event_id"], name: "index_workflow_executions_on_workflow_event_id"
+    t.index ["workflow_id"], name: "index_workflow_executions_on_workflow_id"
+  end
+
+  create_table "workflow_nodes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "data", default: {}, null: false, comment: "Node configuration"
+    t.string "label"
+    t.string "node_type", comment: "Derived from range (e.g. action, condition)"
+    t.datetime "updated_at", null: false
+    t.integer "wf_node_id", null: false, comment: "Logical ID (e.g., 20001)"
+    t.bigint "workflow_event_id", null: false
+    t.index ["workflow_event_id", "wf_node_id"], name: "index_workflow_nodes_on_workflow_event_id_and_wf_node_id", unique: true
+    t.index ["workflow_event_id"], name: "index_workflow_nodes_on_workflow_event_id"
+  end
+
+  create_table "workflows", force: :cascade do |t|
+    t.jsonb "additional_config", default: {}
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.integer "module_id", comment: "1: used for Tickets"
+    t.string "name", null: false
+    t.integer "status", default: 2, comment: "1: active, 2: draft"
+    t.datetime "updated_at", null: false
+    t.integer "workspace_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "comments", "tickets"
   add_foreign_key "notifications", "users"
+  add_foreign_key "workflow_events", "workflows"
+  add_foreign_key "workflow_executions", "tickets"
+  add_foreign_key "workflow_executions", "workflow_events"
+  add_foreign_key "workflow_executions", "workflows"
+  add_foreign_key "workflow_nodes", "workflow_events"
 end

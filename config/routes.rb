@@ -1,4 +1,7 @@
 Rails.application.routes.draw do
+  mount Rswag::Ui::Engine => '/api-docs'
+  mount Rswag::Api::Engine => '/api-docs'
+
   # ---- AUTH ROUTES ----
   scope :auth do
     post :login,   to: "auth#login"
@@ -37,6 +40,14 @@ Rails.application.routes.draw do
 
       get "dashboard/summary", to: "dashboard#summary"
       get "dashboard/charts",  to: "dashboard#charts"
+      resources :workflows
+      resources :ticket_automators, only: [:create, :update] do
+        member do
+          post :event, to: "ticket_automators#create_event"
+          put  :node,  to: "ticket_automators#create_node"
+          put  :publish, to: "ticket_automators#publish"
+        end
+      end
     end
   end
 

@@ -39,9 +39,16 @@ gem "rack-cors"
 gem "ransack"
 
 # Pagination
+# Pagination
 gem "kaminari"
 
+# Swagger / OpenAPI
+gem "rswag-api"
+gem "rswag-ui"
+
 group :development, :test do
+  gem "rspec-rails", "~> 6.0"
+  gem "rswag-specs"
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
 
@@ -58,3 +65,5 @@ end
 gem "jwt", "~> 3.1"
 
 gem "bcrypt", "~> 3.1"
+
+gem "simplecov", "~> 0.22.0", :group => :test

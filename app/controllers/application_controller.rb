@@ -11,8 +11,19 @@ class ApplicationController < ActionController::API
   def options_request
     head :ok
   end
+
+  rescue_from ActiveRecord::RecordNotFound, with: :not_found
+  rescue_from ActiveRecord::RecordInvalid, with: :unprocessable_entity
  
   private
+
+  def not_found(e)
+    render json: { error: e.message }, status: :not_found
+  end
+
+  def unprocessable_entity(e)
+    render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
  
   # -------------------------
   # CORS HEADERS

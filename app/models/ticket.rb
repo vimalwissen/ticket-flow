@@ -17,6 +17,18 @@ class Ticket < ApplicationRecord
   validate :attachment_type_validation
 
   before_create :generate_ticket_id
+  
+  after_create_commit :trigger_workflow_created
+  after_update_commit :trigger_workflow_updated
+
+  def trigger_workflow_created
+    # Using a service to decouple logic
+    Workflow::TriggerService.call("ticket_created", self)
+  end
+
+  def trigger_workflow_updated
+    Workflow::TriggerService.call("ticket_updated", self)
+  end
 
   # -------------------------------
   # STATUS CONSTANTS (merged)
