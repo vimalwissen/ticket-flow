@@ -1,7 +1,7 @@
 require 'swagger_helper'
 
 RSpec.describe 'Workflows API', type: :request do
-  let(:auth_user) { User.create!(email: 'admin@example.com', name: 'Admin', password: 'password') }
+  let(:auth_user) { User.find_or_create_by!(email: 'admin@example.com', name: 'Admin') { |u| u.password = 'password' } }
   let(:Authorization) { "Bearer #{JsonWebToken.encode(user_id: auth_user.id)}" }
 
   path '/api/version1/workflows' do

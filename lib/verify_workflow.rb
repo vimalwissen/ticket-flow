@@ -90,4 +90,7 @@ class VerifyWorkflow
   end
 end
 
-VerifyWorkflow.run
+
+# To run manually: rails runner lib/verify_workflow.rb
+# Or in console: VerifyWorkflow.run
+

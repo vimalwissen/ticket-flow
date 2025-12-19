@@ -9,8 +9,8 @@ RSpec.describe Workflow::Processor do
       flow: { '1' => 10001, '10001' => { '1' => 20001, '0' => nil }, '20001' => nil }
     )
   end
-  let(:user) { User.create!(email: 'test@example.com', name: 'Test', password: 'password') }
-  let(:agent) { User.create!(email: 'agent@example.com', name: 'Agent', password: 'password') }
+  let(:user) { User.find_or_create_by!(email: 'test@example.com', name: 'Test') { |u| u.password = 'password' } }
+  let(:agent) { User.find_or_create_by!(email: 'agent@example.com', name: 'Agent') { |u| u.password = 'password' } }
 
   before do
     event.nodes.create!(wf_node_id: 1, label: 'Start')
